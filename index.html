@@ -1,0 +1,1211 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="application-name" content="Guest Entry Verifier">
+<meta name="description" content="Entry-desk tool: verifies guest name and country against the IIC International Regulators Forum 2026 participant list and logs admissions.">
+<!-- Guest Entry Verifier, portable build, v1.2, 2026-10-12. Host this file on any https static web host (or open it as a file). The participant list is stored encrypted inside the page and unlocked with the desk passcode. -->
+<meta name="theme-color" content="#2D4FD1">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Entry Desk">
+<meta property="og:title" content="IRF 2026 Entry Desk">
+<meta property="og:description" content="Guest name and country verification for the IIC International Regulators Forum 2026 entry desk.">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='12' fill='%232D4FD1'/%3E%3Cpath d='M18 34l9 9 19-21' fill='none' stroke='%23fff' stroke-width='7' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E">
+<title>Guest Entry Verifier</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Public+Sans:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<style>
+:root{padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
+html,body{height:100%}
+img{max-width:100%}
+/* Layout: sticky header carrying the arrival tally; tabbed one-screen desk; the Desk tab is two columns (name search | guest card) that stack on phones. */
+:root{
+  --bg:#F2F4F8; --surface:#FFFFFF; --surface-2:#E9EDF4; --line:#D3D9E4; --line-strong:#B9C2D2;
+  --fg:#141A26; --fg-muted:#5B6678; --fg-faint:#8A94A6;
+  --accent:#2D4FD1; --accent-fg:#FFFFFF; --accent-soft:#E3E9FB; --accent-line:#A9B8F0;
+  --ok:#187A48; --ok-fg:#FFFFFF; --ok-soft:#DDF3E6; --ok-line:#9BD6B3;
+  --warn:#9A5F06; --warn-soft:#FBEFD6; --warn-line:#EBCB84;
+  --bad:#B9332A; --bad-fg:#FFFFFF; --bad-soft:#FBE3E0; --bad-line:#F0A9A2;
+  --font-ui:'Public Sans',system-ui,-apple-system,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;
+  --font-mono:'IBM Plex Mono',ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;
+  --radius:8px; --radius-sm:5px;
+  --shadow:0 1px 2px rgba(20,26,38,.05),0 6px 18px rgba(20,26,38,.06);
+  --focus:0 0 0 3px var(--accent-line);
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --bg:#0F141C; --surface:#171E2A; --surface-2:#1F2836; --line:#2B3647; --line-strong:#3B4859;
+    --fg:#E7EBF3; --fg-muted:#9AA6B8; --fg-faint:#6F7B8E;
+    --accent:#7D97FF; --accent-fg:#0F141C; --accent-soft:#1E2A4A; --accent-line:#3E53A6;
+    --ok:#4FC98A; --ok-fg:#0F141C; --ok-soft:#163626; --ok-line:#2C6B48;
+    --warn:#E3AE4E; --warn-soft:#3A2C12; --warn-line:#7A5A1F;
+    --bad:#F0796F; --bad-fg:#0F141C; --bad-soft:#421C19; --bad-line:#8A3A33;
+    --shadow:0 1px 2px rgba(0,0,0,.4),0 6px 18px rgba(0,0,0,.35);
+    color-scheme:dark;
+  }
+}
+:root[data-theme="dark"]{
+  --bg:#0F141C; --surface:#171E2A; --surface-2:#1F2836; --line:#2B3647; --line-strong:#3B4859;
+  --fg:#E7EBF3; --fg-muted:#9AA6B8; --fg-faint:#6F7B8E;
+  --accent:#7D97FF; --accent-fg:#0F141C; --accent-soft:#1E2A4A; --accent-line:#3E53A6;
+  --ok:#4FC98A; --ok-fg:#0F141C; --ok-soft:#163626; --ok-line:#2C6B48;
+  --warn:#E3AE4E; --warn-soft:#3A2C12; --warn-line:#7A5A1F;
+  --bad:#F0796F; --bad-fg:#0F141C; --bad-soft:#421C19; --bad-line:#8A3A33;
+  --shadow:0 1px 2px rgba(0,0,0,.4),0 6px 18px rgba(0,0,0,.35);
+  color-scheme:dark;
+}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--fg);font-family:var(--font-ui);font-size:15px;line-height:1.45;min-height:100%}
+h1,h2,h3{margin:0;text-wrap:balance;line-height:1.2}
+h2{font-size:1.1rem;font-weight:600}
+h3{font-size:.95rem;font-weight:600}
+p{margin:0}
+button,input,select,textarea{font:inherit;color:inherit}
+input,select,textarea{background:var(--surface);border:1px solid var(--line-strong);border-radius:var(--radius-sm);padding:.55rem .7rem;width:100%;min-width:0}
+input:focus-visible,select:focus-visible,textarea:focus-visible,button:focus-visible,.tab:focus-visible,.result:focus-visible{outline:none;box-shadow:var(--focus)}
+textarea{min-height:7rem;resize:vertical;font-family:var(--font-mono);font-size:.85rem}
+.mono{font-family:var(--font-mono);font-variant-numeric:tabular-nums}
+.muted{color:var(--fg-muted)}
+.small{font-size:.85rem}
+.eyebrow{font-size:.72rem;font-weight:600;letter-spacing:.08em;text-transform:uppercase;color:var(--fg-muted)}
+[hidden]{display:none!important}
+
+/* Header */
+.top{position:sticky;top:env(safe-area-inset-top,0px);z-index:20;background:var(--surface);border-bottom:1px solid var(--line);box-shadow:0 1px 0 var(--line)}
+.top-inner{max-width:1180px;margin:0 auto;padding:.7rem 16px 0;display:flex;flex-wrap:wrap;align-items:center;gap:.6rem 1.2rem}
+.brand{display:flex;flex-direction:column;min-width:0;margin-right:auto}
+.brand-name{font-weight:700;font-size:1.05rem;letter-spacing:-.01em}
+.event-name{color:var(--fg-muted);font-size:.85rem;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:60vw}
+.tally{display:flex;flex-wrap:wrap;gap:.45rem}
+.chip{display:flex;align-items:baseline;gap:.35rem;padding:.3rem .65rem;border-radius:999px;background:var(--surface-2);border:1px solid var(--line);font-size:.82rem;color:var(--fg-muted)}
+.chip b{font-family:var(--font-mono);font-variant-numeric:tabular-nums;font-size:1rem;color:var(--fg);font-weight:500}
+.chip.ok{background:var(--ok-soft);border-color:var(--ok-line);color:var(--ok)} .chip.ok b{color:var(--ok)}
+.chip.warn{background:var(--warn-soft);border-color:var(--warn-line);color:var(--warn)} .chip.warn b{color:var(--warn)}
+.tabs{flex-basis:100%;display:flex;gap:.2rem;overflow-x:auto;scrollbar-width:none;margin-top:.1rem}
+.tabs::-webkit-scrollbar{display:none}
+.tab{background:none;border:0;border-bottom:3px solid transparent;padding:.55rem .85rem .5rem;color:var(--fg-muted);font-weight:500;cursor:pointer;white-space:nowrap;border-radius:4px 4px 0 0}
+.tab:hover{color:var(--fg);background:var(--surface-2)}
+.tab.active{color:var(--accent);border-bottom-color:var(--accent)}
+.tab .cnt{font-family:var(--font-mono);font-size:.78rem;color:var(--fg-faint);margin-left:.3rem}
+
+/* Page */
+main{max-width:1180px;margin:0 auto;padding-block:1.1rem 2rem;padding-inline:16px}
+.panel{display:flex;flex-direction:column;gap:1rem}
+.notice{padding:.75rem 1rem;border-radius:var(--radius);border:1px solid var(--warn-line);background:var(--warn-soft);color:var(--warn);display:flex;flex-wrap:wrap;gap:.5rem 1rem;align-items:center}
+.notice.info{border-color:var(--accent-line);background:var(--accent-soft);color:var(--fg)}
+.notice .btn{margin-left:auto}
+.desk{display:grid;grid-template-columns:minmax(0,5fr) minmax(0,6fr);gap:1.1rem;align-items:start}
+.col{min-width:0;display:flex;flex-direction:column;gap:.7rem}
+.field-label{font-weight:600;font-size:.9rem}
+.search-wrap{position:relative}
+.search-wrap input{font-size:1.15rem;padding:.75rem .9rem;border-radius:var(--radius);border-width:1.5px}
+.hint{font-size:.78rem;color:var(--fg-faint)}
+.hint kbd{font-family:var(--font-mono);font-size:.74rem;border:1px solid var(--line-strong);border-bottom-width:2px;border-radius:4px;padding:0 .3rem;background:var(--surface)}
+
+/* Results */
+.results{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:.35rem}
+.result{display:grid;grid-template-columns:1fr auto;gap:.2rem .8rem;align-items:center;width:100%;text-align:left;background:var(--surface);border:1px solid var(--line);border-radius:var(--radius);padding:.6rem .8rem;cursor:pointer}
+.result:hover{border-color:var(--accent-line);background:var(--accent-soft)}
+.result.selected{border-color:var(--accent);box-shadow:inset 3px 0 0 var(--accent)}
+.result .r-name{grid-column:1;grid-row:1;font-weight:600;font-size:1rem;min-width:0;overflow-wrap:anywhere}
+.result .r-sub{grid-column:1;grid-row:2;color:var(--fg-muted);font-size:.83rem;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.result .r-right{grid-column:2;grid-row:1/3;display:flex;flex-direction:column;align-items:flex-end;gap:.25rem}
+.pill{display:inline-flex;align-items:center;gap:.3rem;padding:.12rem .5rem;border-radius:999px;font-size:.74rem;font-weight:600;letter-spacing:.02em;white-space:nowrap;border:1px solid var(--line);background:var(--surface-2);color:var(--fg-muted)}
+.pill.exact{background:var(--ok-soft);color:var(--ok);border-color:var(--ok-line)}
+.pill.close{background:var(--accent-soft);color:var(--accent);border-color:var(--accent-line)}
+.pill.possible{background:var(--warn-soft);color:var(--warn);border-color:var(--warn-line)}
+.pill.arrived{background:var(--ok-soft);color:var(--ok);border-color:var(--ok-line)}
+.pill.bad{background:var(--bad-soft);color:var(--bad);border-color:var(--bad-line)}
+.flag{font-size:1.05em;line-height:1}
+.notfound{border:1px dashed var(--line-strong);border-radius:var(--radius);padding:.9rem 1rem;display:flex;flex-direction:column;gap:.4rem;background:var(--surface)}
+.nf-title{font-weight:600}
+
+/* Guest card */
+.card{background:var(--surface);border:1px solid var(--line);border-radius:var(--radius);box-shadow:var(--shadow);padding:1rem 1.1rem;display:flex;flex-direction:column;gap:.9rem;min-width:0}
+.card.empty{box-shadow:none;border-style:dashed;color:var(--fg-muted);align-items:center;justify-content:center;min-height:11rem;text-align:center}
+.card-head{display:flex;flex-wrap:wrap;gap:.5rem;align-items:center;justify-content:space-between}
+.g-name{font-size:1.5rem;font-weight:700;letter-spacing:-.01em;overflow-wrap:anywhere}
+.g-country{display:flex;align-items:center;gap:.55rem;font-size:1.05rem;flex-wrap:wrap}
+.g-country .code{font-family:var(--font-mono);font-size:.8rem;color:var(--fg-muted);border:1px solid var(--line);border-radius:4px;padding:0 .35rem}
+.dl{display:grid;grid-template-columns:minmax(7rem,auto) 1fr;gap:.3rem .9rem;margin:0;font-size:.9rem}
+.dl dt{color:var(--fg-muted)} .dl dd{margin:0;min-width:0;overflow-wrap:anywhere}
+details summary{cursor:pointer;color:var(--accent);font-size:.85rem;font-weight:500}
+.verify{border-top:1px solid var(--line);padding-top:.9rem;display:flex;flex-direction:column;gap:.55rem}
+.verify-row{display:grid;grid-template-columns:1fr;gap:.35rem}
+.vres{display:flex;align-items:flex-start;gap:.5rem;padding:.6rem .75rem;border-radius:var(--radius-sm);border:1px solid var(--line);background:var(--surface-2);font-size:.9rem;min-height:2.6rem}
+.vres .dot{width:.65rem;height:.65rem;border-radius:50%;background:var(--fg-faint);margin-top:.35rem;flex:none}
+.vres.match{background:var(--ok-soft);border-color:var(--ok-line);color:var(--ok)} .vres.match .dot{background:var(--ok)}
+.vres.mismatch{background:var(--bad-soft);border-color:var(--bad-line);color:var(--bad)} .vres.mismatch .dot{background:var(--bad)}
+.vres.unknown{background:var(--warn-soft);border-color:var(--warn-line);color:var(--warn)} .vres.unknown .dot{background:var(--warn)}
+.banner{padding:.65rem .8rem;border-radius:var(--radius-sm);font-size:.9rem;border:1px solid}
+.banner.ok{background:var(--ok-soft);border-color:var(--ok-line);color:var(--ok)}
+.banner.warn{background:var(--warn-soft);border-color:var(--warn-line);color:var(--warn)}
+.actions{display:flex;flex-wrap:wrap;gap:.5rem;align-items:center}
+.actions .spacer{flex:1}
+
+/* Buttons */
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:.4rem;border:1px solid var(--line-strong);background:var(--surface);color:var(--fg);border-radius:var(--radius-sm);padding:.55rem .95rem;font-weight:600;cursor:pointer;white-space:nowrap;line-height:1.2}
+.btn:hover{background:var(--surface-2)}
+.btn:disabled{opacity:.5;cursor:not-allowed}
+.btn.primary{background:var(--accent);border-color:var(--accent);color:var(--accent-fg)}
+.btn.primary:hover{filter:brightness(1.08)}
+.btn.ok{background:var(--ok);border-color:var(--ok);color:var(--ok-fg)}
+.btn.danger{color:var(--bad);border-color:var(--bad-line)} .btn.danger:hover{background:var(--bad-soft)}
+.btn.danger.arm{background:var(--bad);color:var(--bad-fg);border-color:var(--bad)}
+.btn.ghost{border-color:transparent;background:none;color:var(--fg-muted)} .btn.ghost:hover{background:var(--surface-2);color:var(--fg)}
+.btn.sm{padding:.35rem .65rem;font-size:.85rem}
+.btn.big{padding:.75rem 1.3rem;font-size:1.05rem}
+
+/* Tables */
+.toolbar{display:flex;flex-wrap:wrap;gap:.5rem;align-items:center}
+.toolbar input[type=search],.toolbar select{width:auto;min-width:10rem;flex:1 1 12rem}
+.tablewrap{overflow-x:auto;border:1px solid var(--line);border-radius:var(--radius);background:var(--surface)}
+table{border-collapse:collapse;width:100%;font-size:.88rem}
+th,td{text-align:left;padding:.5rem .7rem;border-bottom:1px solid var(--line);vertical-align:top}
+th{font-size:.74rem;letter-spacing:.06em;text-transform:uppercase;color:var(--fg-muted);font-weight:600;background:var(--surface-2);position:sticky;top:0}
+tbody tr:last-child td{border-bottom:0}
+td.num,th.num{text-align:right;font-family:var(--font-mono);font-variant-numeric:tabular-nums}
+.time{font-family:var(--font-mono);font-variant-numeric:tabular-nums;white-space:nowrap}
+.empty-row td{color:var(--fg-muted);text-align:center;padding:1.4rem}
+
+/* Forms / settings */
+.grid2{display:grid;grid-template-columns:repeat(auto-fit,minmax(14rem,1fr));gap:.8rem 1rem}
+.field{display:flex;flex-direction:column;gap:.3rem;min-width:0}
+.field label{font-size:.85rem;font-weight:600}
+.field .help{font-size:.78rem;color:var(--fg-faint)}
+.switch{display:flex;align-items:flex-start;gap:.6rem;cursor:pointer}
+.switch input{width:auto;margin-top:.25rem;accent-color:var(--accent)}
+.section-title{display:flex;align-items:baseline;justify-content:space-between;gap:1rem;flex-wrap:wrap}
+.drop{border:2px dashed var(--line-strong);border-radius:var(--radius);padding:1.1rem;text-align:center;background:var(--surface);display:flex;flex-direction:column;gap:.5rem;align-items:center}
+.drop.over{border-color:var(--accent);background:var(--accent-soft)}
+.drop input[type=file]{width:auto;border:0;padding:0;background:none}
+.bars{display:flex;flex-direction:column;gap:.35rem;font-size:.85rem}
+.bar{display:grid;grid-template-columns:minmax(6rem,11rem) 1fr auto;gap:.6rem;align-items:center}
+.bar .track{height:.55rem;background:var(--surface-2);border-radius:999px;overflow:hidden;border:1px solid var(--line)}
+.bar .fill{height:100%;background:var(--accent);border-radius:999px}
+.bar .fill.ok{background:var(--ok)}
+.bar .n{font-family:var(--font-mono);font-variant-numeric:tabular-nums;color:var(--fg-muted);white-space:nowrap}
+.mapping{display:grid;grid-template-columns:repeat(auto-fit,minmax(12rem,1fr));gap:.6rem .8rem}
+.status-line{font-size:.88rem;color:var(--fg-muted)}
+footer{max-width:1180px;margin:0 auto;padding:0 16px 1.5rem;color:var(--fg-faint);font-size:.78rem;display:flex;flex-wrap:wrap;gap:.3rem 1rem}
+.toast{position:fixed;left:50%;bottom:calc(1.2rem + env(safe-area-inset-bottom,0px));transform:translateX(-50%);background:var(--fg);color:var(--bg);padding:.6rem 1rem;border-radius:999px;font-size:.9rem;box-shadow:var(--shadow);z-index:50;max-width:min(92vw,34rem);text-align:center}
+.copybox{display:flex;flex-direction:column;gap:.5rem}
+.copybox textarea{min-height:9rem}
+.sr{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0)}
+@media (max-width:760px){
+  .desk{grid-template-columns:1fr}
+  .g-name{font-size:1.3rem}
+  .event-name{max-width:70vw}
+  .dl{grid-template-columns:1fr} .dl dt{margin-top:.2rem}
+}
+@media (prefers-reduced-motion:no-preference){
+  .result,.btn,.tab{transition:background-color .12s,border-color .12s,color .12s}
+}
+</style>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+
+</head>
+<body>
+<header class="top">
+  <div class="top-inner">
+    <div class="brand">
+      <span class="brand-name">Guest Entry Verifier</span>
+      <span class="event-name" id="hdrEvent">No event name set</span>
+    </div>
+    <div class="tally" aria-label="Arrival tally">
+      <div class="chip"><b id="tExpected">0</b> expected</div>
+      <div class="chip ok"><b id="tArrived">0</b> arrived</div>
+      <div class="chip"><b id="tRemaining">0</b> remaining</div>
+      <div class="chip warn"><b id="tExceptions">0</b> exceptions</div>
+    </div>
+    <nav class="tabs" role="tablist" aria-label="Sections">
+      <button class="tab active" role="tab" id="tab-desk" data-tab="desk" aria-selected="true">Desk</button>
+      <button class="tab" role="tab" id="tab-log" data-tab="log" aria-selected="false">Log<span class="cnt" id="cntLog"></span></button>
+      <button class="tab" role="tab" id="tab-list" data-tab="list" aria-selected="false">Guest list<span class="cnt" id="cntList"></span></button>
+      <button class="tab" role="tab" id="tab-settings" data-tab="settings" aria-selected="false">Settings</button>
+    </nav>
+  </div>
+</header>
+
+<main>
+  <!-- DESK -->
+  <section class="panel" id="panel-desk" role="tabpanel">
+    <div class="notice" id="noListNotice">
+      <span>No guest list loaded. Reload the built-in participant list, or import another list.</span>
+      <button class="btn sm" id="btnGoImport">Import list</button>
+      <button class="btn sm ghost" id="btnSampleDesk">Load built-in list</button>
+    </div>
+    <div class="card" id="unlockCard" hidden>
+      <div class="card-head"><span class="eyebrow">Participant list</span><span class="pill">Locked</span></div>
+      <div><div style="font-weight:600">Enter the desk passcode</div><div class="small muted">The participant list is stored encrypted inside this page. The passcode is in the message that came with the link, and is needed once per device.</div></div>
+      <div class="verify-row"><label class="field-label" for="unlockPass">Desk passcode</label><input id="unlockPass" type="password" autocomplete="off" autocapitalize="none" spellcheck="false" placeholder="irf2026-…"></div>
+      <div class="actions"><button class="btn primary" id="btnUnlock">Unlock list</button><span class="small muted" id="unlockMsg"></span></div>
+    </div>
+    <div class="desk">
+      <div class="col">
+        <label class="field-label" for="q">Guest name as given at the desk</label>
+        <div class="search-wrap">
+          <input id="q" type="search" placeholder="Start typing the name…" autocomplete="off" spellcheck="false" aria-controls="results" aria-label="Guest name">
+        </div>
+        <div class="hint"><kbd>Enter</kbd> selects the first result · <kbd>Esc</kbd> clears · Titles such as Mr, Dr, Dato', Md. are ignored and common spelling variants are matched.</div>
+        <ol class="results" id="results" aria-live="polite"></ol>
+        <div class="notfound" id="notFound" hidden>
+          <div class="nf-title">No matching name on the list</div>
+          <div class="small muted">Try the surname only, or a different spelling. If the guest is not on the list, record them so the organiser can follow up.</div>
+          <div class="actions"><button class="btn" id="btnWalkin">Record as not on list</button></div>
+        </div>
+      </div>
+      <div class="col">
+        <div class="card empty" id="emptyCard">
+          <div>
+            <div style="font-weight:600;color:var(--fg)">Select a guest to verify</div>
+            <div class="small">The card shows the listed country and details. Enter the country the guest states, then admit.</div>
+          </div>
+        </div>
+
+        <div class="card" id="guestCard" hidden>
+          <div class="card-head">
+            <span class="eyebrow">Listed guest</span>
+            <span class="pill" id="gStatus">Not yet arrived</span>
+          </div>
+          <div>
+            <div class="g-name" id="gName">—</div>
+            <div class="small muted" id="gMatch"></div>
+          </div>
+          <div class="g-country"><span class="flag" id="gFlag"></span><span id="gCountry">—</span><span class="code" id="gCode"></span></div>
+          <dl class="dl" id="gDetails"></dl>
+          <details id="gMoreWrap" hidden><summary>All columns from the list</summary><dl class="dl" id="gMore" style="margin-top:.5rem"></dl></details>
+
+          <div class="banner warn" id="gArrivedBanner" hidden></div>
+
+          <div class="verify">
+            <div class="verify-row">
+              <label class="field-label" for="countryInput">Country stated by the guest or shown on ID</label>
+              <input id="countryInput" list="countryList" placeholder="Type the country…" autocomplete="off">
+            </div>
+            <div class="vres" id="vres"><span class="dot"></span><span id="vresText">Enter the stated country to compare it with the list.</span></div>
+            <div class="verify-row">
+              <label class="field-label small" for="noteInput">Note <span class="muted" style="font-weight:400">(optional; required for an override)</span></label>
+              <input id="noteInput" placeholder="e.g. passport shows dual nationality">
+            </div>
+            <div class="actions">
+              <button class="btn primary big" id="btnAdmit">Admit</button>
+              <button class="btn" id="btnOverride" hidden>Admit with override</button>
+              <button class="btn" id="btnDuplicate" hidden>Record duplicate attempt</button>
+              <span class="spacer"></span>
+              <button class="btn danger" id="btnDecline">Decline entry</button>
+              <button class="btn ghost" id="btnClear">Clear</button>
+            </div>
+          </div>
+        </div>
+
+        <div class="card" id="walkinCard" hidden>
+          <div class="card-head">
+            <span class="eyebrow">Not on list</span>
+            <span class="pill bad">Exception</span>
+          </div>
+          <div class="grid2">
+            <div class="field"><label for="wName">Name as given</label><input id="wName" autocomplete="off"></div>
+            <div class="field"><label for="wCountry">Country stated</label><input id="wCountry" list="countryList" autocomplete="off"></div>
+          </div>
+          <div class="field"><label for="wNote">Note</label><input id="wNote" placeholder="e.g. says invited by the protocol team; ID checked"></div>
+          <div class="actions">
+            <button class="btn primary" id="btnWalkinAdmit">Admit as exception</button>
+            <button class="btn danger" id="btnWalkinDecline">Decline</button>
+            <span class="spacer"></span>
+            <button class="btn ghost" id="btnWalkinCancel">Cancel</button>
+          </div>
+        </div>
+      </div>
+    </div>
+    <datalist id="countryList"></datalist>
+  </section>
+
+  <!-- LOG -->
+  <section class="panel" id="panel-log" role="tabpanel" hidden>
+    <div class="section-title">
+      <h2>Entry log</h2>
+      <span class="status-line" id="logSummary"></span>
+    </div>
+    <div class="toolbar">
+      <select id="logFilter" aria-label="Filter log">
+        <option value="all">All entries</option>
+        <option value="admitted">Admitted</option>
+        <option value="override">Admitted with override</option>
+        <option value="walkin">Not on list</option>
+        <option value="duplicate">Duplicate attempts</option>
+        <option value="declined">Declined</option>
+      </select>
+      <input type="search" id="logSearch" placeholder="Search the log…" aria-label="Search log">
+      <button class="btn" id="btnSaveLog">Save CSV</button>
+      <button class="btn" id="btnCopyLog">Copy CSV</button>
+      <button class="btn danger" id="btnClearLog">Clear log</button>
+    </div>
+    <div class="copybox" id="logCopyBox" hidden>
+      <span class="small muted">The CSV below is ready to paste into Excel or a message.</span>
+      <textarea id="logCopyText" readonly aria-label="CSV text"></textarea>
+    </div>
+    <div class="tablewrap">
+      <table id="logTable">
+        <thead><tr><th>Time</th><th>Name</th><th>Listed country</th><th>Stated country</th><th>Result</th><th>Desk</th><th>Note</th></tr></thead>
+        <tbody id="logBody"></tbody>
+      </table>
+    </div>
+  </section>
+
+  <!-- GUEST LIST -->
+  <section class="panel" id="panel-list" role="tabpanel">
+    <div class="section-title">
+      <h2>Guest list</h2>
+      <span class="status-line" id="listStatus">No list loaded.</span>
+    </div>
+    <div class="grid2">
+      <div class="drop" id="dropZone">
+        <div style="font-weight:600">Import the invitation list</div>
+        <div class="small muted">CSV, Excel (.xlsx / .xls) or tab-separated text. The first sheet is used. Drop the file here or choose it.</div>
+        <input type="file" id="fileInput" accept=".csv,.tsv,.txt,.xlsx,.xls,.xlsm" aria-label="Choose list file">
+        <div class="small muted" id="xlsxNote"></div>
+      </div>
+      <div class="field">
+        <label for="pasteInput">Or paste rows copied from Excel or Google Sheets (header row first)</label>
+        <textarea id="pasteInput" placeholder="Name&#9;Country&#9;Organisation&#10;…"></textarea>
+        <div class="actions">
+          <button class="btn" id="btnImportPaste">Import pasted rows</button>
+          <button class="btn ghost" id="btnSample">Reload built-in participant list</button>
+        </div>
+      </div>
+    </div>
+
+    <div class="card" id="mappingCard" hidden>
+      <div class="section-title"><h3>Check the column mapping</h3><span class="small muted" id="mapSource"></span></div>
+      <div class="mapping">
+        <div class="field"><label for="mapName">Name column</label><select id="mapName"></select></div>
+        <div class="field"><label for="mapName2">Second name column <span class="muted" style="font-weight:400">(if first and last names are separate)</span></label><select id="mapName2"></select></div>
+        <div class="field"><label for="mapCountry">Country column</label><select id="mapCountry"></select></div>
+        <div class="field"><label for="mapD1">Show on card 1</label><select id="mapD1"></select></div>
+        <div class="field"><label for="mapD2">Show on card 2</label><select id="mapD2"></select></div>
+        <div class="field"><label for="mapD3">Show on card 3</label><select id="mapD3"></select></div>
+      </div>
+      <div class="small muted" id="mapPreview"></div>
+      <div class="actions">
+        <button class="btn primary" id="btnApplyMap">Use this list</button>
+        <button class="btn ghost" id="btnCancelMap">Cancel</button>
+      </div>
+    </div>
+
+    <div id="listLoaded" hidden class="panel">
+      <div class="card">
+        <div class="section-title"><h3>Arrivals by country</h3><span class="small muted" id="countryCount"></span></div>
+        <div class="bars" id="countryBars"></div>
+      </div>
+      <div class="toolbar">
+        <input type="search" id="listSearch" placeholder="Filter guests…" aria-label="Filter guests">
+        <select id="listFilter" aria-label="Filter by status"><option value="all">All guests</option><option value="arrived">Arrived</option><option value="pending">Not yet arrived</option></select>
+        <button class="btn danger" id="btnRemoveList">Remove list</button>
+      </div>
+      <div class="tablewrap">
+        <table id="listTable">
+          <thead><tr><th>#</th><th>Name</th><th>Country</th><th>Details</th><th>Status</th></tr></thead>
+          <tbody id="listBody"></tbody>
+        </table>
+      </div>
+    </div>
+  </section>
+
+  <!-- SETTINGS -->
+  <section class="panel" id="panel-settings" role="tabpanel" hidden>
+    <h2>Settings</h2>
+    <div class="card">
+      <h3>Event and desk</h3>
+      <div class="grid2">
+        <div class="field"><label for="setEvent">Event name</label><input id="setEvent" placeholder="e.g. Regional Regulatory Roundtable, Dhaka"></div>
+        <div class="field"><label for="setDesk">Desk ID</label><input id="setDesk" placeholder="e.g. Desk A"><span class="help">Written into every log entry so logs from several desks can be merged later.</span></div>
+      </div>
+    </div>
+    <div class="card">
+      <h3>Verification rules</h3>
+      <label class="switch"><input type="checkbox" id="setStrict" checked><span><b>Require a country match before Admit</b><br><span class="small muted">When on, a mismatch or an unrecognised country can only be admitted with an override and a note.</span></span></label>
+      <label class="switch"><input type="checkbox" id="setVariants" checked><span><b>Match common spelling variants</b><br><span class="small muted">Treats Mohammad / Muhammad / Md., Hossain / Hussain, Chowdhury / Choudhury, Jayawardena / Jayawardene and similar pairs as the same name part.</span></span></label>
+      <label class="switch"><input type="checkbox" id="setSound"><span><b>Sound on admit and mismatch</b><br><span class="small muted">A short tone so the officer can keep eyes on the guest.</span></span></label>
+    </div>
+    <div class="card">
+      <h3>Backup and restore</h3>
+      <p class="small muted">A backup holds the guest list, the entry log and these settings. Save one before the event starts and after it ends, or to move the desk to another device.</p>
+      <div class="actions">
+        <button class="btn" id="btnSaveBackup">Save backup (JSON)</button>
+        <button class="btn" id="btnCopyBackup">Copy backup</button>
+      </div>
+      <div class="copybox" id="backupCopyBox" hidden><textarea id="backupCopyText" readonly aria-label="Backup JSON"></textarea></div>
+      <div class="field">
+        <label for="restoreInput">Restore from a backup</label>
+        <input type="file" id="restoreFile" accept=".json,application/json" aria-label="Choose backup file">
+        <textarea id="restoreInput" placeholder="…or paste the backup JSON here"></textarea>
+        <div class="actions"><button class="btn" id="btnRestore">Restore</button></div>
+      </div>
+    </div>
+    <div class="card">
+      <h3>Data and privacy</h3>
+      <p class="small muted">The guest list and the entry log are personal data. They are processed only inside this browser and are never sent anywhere by this page. Clear them from the device once the organiser has the exported log.</p>
+      <div class="actions"><button class="btn danger" id="btnClearAll">Clear all data on this device</button></div>
+    </div>
+    <div class="card">
+      <h3>About</h3>
+      <dl class="dl">
+        <dt>Version</dt><dd>1.2 (portable build)</dd>
+        <dt>Date</dt><dd>2026-10-12</dd>
+        <dt>Built-in list</dt><dd>IIC International Regulators Forum 2026 participant list (Kuala Lumpur, 12–13 October 2026): 95 names from the organiser's PDF dated 2026-10-10. It is stored encrypted inside this page (AES-256-GCM, key derived from the desk passcode) and unlocked once per device with the passcode. If removed, reload it from the Guest list tab.</dd>
+        <dt>Name matching</dt><dd>Titles and particles are removed, common transliteration variants are unified, then each name part is compared with a Jaro–Winkler similarity so near-spellings still match. Exact, Close and Possible indicate how strong the match is.</dd>
+        <dt>Country matching</dt><dd>Names, ISO alpha-2 and alpha-3 codes and common short forms (UK, USA, UAE, KSA, Korea) are resolved to the same country before comparing.</dd>
+        <dt>Works offline</dt><dd>Once the list is loaded, everything runs without a connection. Excel import needs the SheetJS library, which loads from the internet once; CSV and pasted rows never need it.</dd>
+      </dl>
+    </div>
+  </section>
+</main>
+
+<footer>
+  <span>Guest Entry Verifier · v1.2 (portable) · 2026-10-12</span>
+  <span>All data stays in this browser.</span>
+  <span id="footStorage"></span>
+</footer>
+<div class="toast" id="toast" hidden role="status"></div>
+
+<script>
+/* ===================== Country reference data ===================== */
+const ISO_TABLE = `AF:AFG:Afghanistan|AX:ALA:Åland Islands|AL:ALB:Albania|DZ:DZA:Algeria|AS:ASM:American Samoa|AD:AND:Andorra|AO:AGO:Angola|AI:AIA:Anguilla|AQ:ATA:Antarctica|AG:ATG:Antigua and Barbuda|AR:ARG:Argentina|AM:ARM:Armenia|AW:ABW:Aruba|AU:AUS:Australia|AT:AUT:Austria|AZ:AZE:Azerbaijan|BS:BHS:Bahamas|BH:BHR:Bahrain|BD:BGD:Bangladesh|BB:BRB:Barbados|BY:BLR:Belarus|BE:BEL:Belgium|BZ:BLZ:Belize|BJ:BEN:Benin|BM:BMU:Bermuda|BT:BTN:Bhutan|BO:BOL:Bolivia|BQ:BES:Bonaire, Sint Eustatius and Saba|BA:BIH:Bosnia and Herzegovina|BW:BWA:Botswana|BV:BVT:Bouvet Island|BR:BRA:Brazil|IO:IOT:British Indian Ocean Territory|BN:BRN:Brunei Darussalam|BG:BGR:Bulgaria|BF:BFA:Burkina Faso|BI:BDI:Burundi|CV:CPV:Cabo Verde|KH:KHM:Cambodia|CM:CMR:Cameroon|CA:CAN:Canada|KY:CYM:Cayman Islands|CF:CAF:Central African Republic|TD:TCD:Chad|CL:CHL:Chile|CN:CHN:China|CX:CXR:Christmas Island|CC:CCK:Cocos (Keeling) Islands|CO:COL:Colombia|KM:COM:Comoros|CG:COG:Congo|CD:COD:Congo, Democratic Republic of the|CK:COK:Cook Islands|CR:CRI:Costa Rica|CI:CIV:Côte d'Ivoire|HR:HRV:Croatia|CU:CUB:Cuba|CW:CUW:Curaçao|CY:CYP:Cyprus|CZ:CZE:Czechia|DK:DNK:Denmark|DJ:DJI:Djibouti|DM:DMA:Dominica|DO:DOM:Dominican Republic|EC:ECU:Ecuador|EG:EGY:Egypt|SV:SLV:El Salvador|GQ:GNQ:Equatorial Guinea|ER:ERI:Eritrea|EE:EST:Estonia|SZ:SWZ:Eswatini|ET:ETH:Ethiopia|FK:FLK:Falkland Islands|FO:FRO:Faroe Islands|FJ:FJI:Fiji|FI:FIN:Finland|FR:FRA:France|GF:GUF:French Guiana|PF:PYF:French Polynesia|TF:ATF:French Southern Territories|GA:GAB:Gabon|GM:GMB:Gambia|GE:GEO:Georgia|DE:DEU:Germany|GH:GHA:Ghana|GI:GIB:Gibraltar|GR:GRC:Greece|GL:GRL:Greenland|GD:GRD:Grenada|GP:GLP:Guadeloupe|GU:GUM:Guam|GT:GTM:Guatemala|GG:GGY:Guernsey|GN:GIN:Guinea|GW:GNB:Guinea-Bissau|GY:GUY:Guyana|HT:HTI:Haiti|HM:HMD:Heard Island and McDonald Islands|VA:VAT:Holy See|HN:HND:Honduras|HK:HKG:Hong Kong|HU:HUN:Hungary|IS:ISL:Iceland|IN:IND:India|ID:IDN:Indonesia|IR:IRN:Iran|IQ:IRQ:Iraq|IE:IRL:Ireland|IM:IMN:Isle of Man|IL:ISR:Israel|IT:ITA:Italy|JM:JAM:Jamaica|JP:JPN:Japan|JE:JEY:Jersey|JO:JOR:Jordan|KZ:KAZ:Kazakhstan|KE:KEN:Kenya|KI:KIR:Kiribati|KP:PRK:North Korea|KR:KOR:South Korea|KW:KWT:Kuwait|KG:KGZ:Kyrgyzstan|LA:LAO:Lao People's Democratic Republic|LV:LVA:Latvia|LB:LBN:Lebanon|LS:LSO:Lesotho|LR:LBR:Liberia|LY:LBY:Libya|LI:LIE:Liechtenstein|LT:LTU:Lithuania|LU:LUX:Luxembourg|MO:MAC:Macao|MG:MDG:Madagascar|MW:MWI:Malawi|MY:MYS:Malaysia|MV:MDV:Maldives|ML:MLI:Mali|MT:MLT:Malta|MH:MHL:Marshall Islands|MQ:MTQ:Martinique|MR:MRT:Mauritania|MU:MUS:Mauritius|YT:MYT:Mayotte|MX:MEX:Mexico|FM:FSM:Micronesia|MD:MDA:Moldova|MC:MCO:Monaco|MN:MNG:Mongolia|ME:MNE:Montenegro|MS:MSR:Montserrat|MA:MAR:Morocco|MZ:MOZ:Mozambique|MM:MMR:Myanmar|NA:NAM:Namibia|NR:NRU:Nauru|NP:NPL:Nepal|NL:NLD:Netherlands|NC:NCL:New Caledonia|NZ:NZL:New Zealand|NI:NIC:Nicaragua|NE:NER:Niger|NG:NGA:Nigeria|NU:NIU:Niue|NF:NFK:Norfolk Island|MK:MKD:North Macedonia|MP:MNP:Northern Mariana Islands|NO:NOR:Norway|OM:OMN:Oman|PK:PAK:Pakistan|PW:PLW:Palau|PS:PSE:Palestine|PA:PAN:Panama|PG:PNG:Papua New Guinea|PY:PRY:Paraguay|PE:PER:Peru|PH:PHL:Philippines|PN:PCN:Pitcairn|PL:POL:Poland|PT:PRT:Portugal|PR:PRI:Puerto Rico|QA:QAT:Qatar|RE:REU:Réunion|RO:ROU:Romania|RU:RUS:Russian Federation|RW:RWA:Rwanda|BL:BLM:Saint Barthélemy|SH:SHN:Saint Helena|KN:KNA:Saint Kitts and Nevis|LC:LCA:Saint Lucia|MF:MAF:Saint Martin|PM:SPM:Saint Pierre and Miquelon|VC:VCT:Saint Vincent and the Grenadines|WS:WSM:Samoa|SM:SMR:San Marino|ST:STP:Sao Tome and Principe|SA:SAU:Saudi Arabia|SN:SEN:Senegal|RS:SRB:Serbia|SC:SYC:Seychelles|SL:SLE:Sierra Leone|SG:SGP:Singapore|SX:SXM:Sint Maarten|SK:SVK:Slovakia|SI:SVN:Slovenia|SB:SLB:Solomon Islands|SO:SOM:Somalia|ZA:ZAF:South Africa|GS:SGS:South Georgia and the South Sandwich Islands|SS:SSD:South Sudan|ES:ESP:Spain|LK:LKA:Sri Lanka|SD:SDN:Sudan|SR:SUR:Suriname|SJ:SJM:Svalbard and Jan Mayen|SE:SWE:Sweden|CH:CHE:Switzerland|SY:SYR:Syrian Arab Republic|TW:TWN:Taiwan|TJ:TJK:Tajikistan|TZ:TZA:Tanzania|TH:THA:Thailand|TL:TLS:Timor-Leste|TG:TGO:Togo|TK:TKL:Tokelau|TO:TON:Tonga|TT:TTO:Trinidad and Tobago|TN:TUN:Tunisia|TR:TUR:Türkiye|TM:TKM:Turkmenistan|TC:TCA:Turks and Caicos Islands|TV:TUV:Tuvalu|UG:UGA:Uganda|UA:UKR:Ukraine|AE:ARE:United Arab Emirates|GB:GBR:United Kingdom|US:USA:United States|UM:UMI:United States Minor Outlying Islands|UY:URY:Uruguay|UZ:UZB:Uzbekistan|VU:VUT:Vanuatu|VE:VEN:Venezuela|VN:VNM:Viet Nam|VG:VGB:British Virgin Islands|VI:VIR:U.S. Virgin Islands|WF:WLF:Wallis and Futuna|EH:ESH:Western Sahara|YE:YEM:Yemen|ZM:ZMB:Zambia|ZW:ZWE:Zimbabwe|XK:XKX:Kosovo|XC:XCI:Channel Islands`;
+
+/* Informal names, official long forms, demonyms. Keys are pre-normalised (lower case, no punctuation). */
+const COUNTRY_ALIASES = {
+  'uk':'GB','u k':'GB','great britain':'GB','britain':'GB','england':'GB','scotland':'GB','wales':'GB','northern ireland':'GB','united kingdom of great britain and northern ireland':'GB','british':'GB',
+  'usa':'US','u s a':'US','u s':'US','united states of america':'US','america':'US','the states':'US','american':'US',
+  'uae':'AE','u a e':'AE','emirates':'AE','dubai':'AE','abu dhabi':'AE','emirati':'AE',
+  'ksa':'SA','saudi':'SA','kingdom of saudi arabia':'SA','saudi arabian':'SA',
+  'korea':'KR','republic of korea':'KR','korea republic of':'KR','rok':'KR','s korea':'KR','korea south':'KR','korean':'KR',
+  'dprk':'KP','democratic peoples republic of korea':'KP','korea democratic peoples republic of':'KP','n korea':'KP','korea north':'KP',
+  'prc':'CN','peoples republic of china':'CN','pr china':'CN','china prc':'CN','mainland china':'CN','chinese':'CN',
+  'republic of china':'TW','taiwan roc':'TW','roc':'TW','chinese taipei':'TW','taiwan province of china':'TW','taiwanese':'TW','taiwan r o c':'TW','taiwan republic of china':'TW',
+  'hong kong sar':'HK','hong kong sar china':'HK','hksar':'HK','hong kong china':'HK','hk':'HK','hong konger':'HK',
+  'macau':'MO','macao sar':'MO','macau sar':'MO','macao sar china':'MO','macau china':'MO',
+  'russia':'RU','russian':'RU',
+  'iran islamic republic of':'IR','islamic republic of iran':'IR','persia':'IR','iranian':'IR',
+  'syria':'SY','syrian':'SY',
+  'laos':'LA','lao':'LA','lao pdr':'LA','lao peoples democratic republic':'LA','laotian':'LA',
+  'vietnam':'VN','socialist republic of vietnam':'VN','socialist republic of viet nam':'VN','vietnamese':'VN',
+  'burma':'MM','union of myanmar':'MM','republic of the union of myanmar':'MM','myanmar burma':'MM','burmese':'MM',
+  'ceylon':'LK','srilanka':'LK','democratic socialist republic of sri lanka':'LK','sri lankan':'LK','lankan':'LK',
+  'bangla desh':'BD','peoples republic of bangladesh':'BD','bangladeshi':'BD',
+  'malaysian':'MY','indian':'IN','bharat':'IN','pakistani':'PK','islamic republic of pakistan':'PK','nepali':'NP','nepalese':'NP','bhutanese':'BT','kingdom of bhutan':'BT','maldivian':'MV','republic of maldives':'MV','afghan':'AF',
+  'indonesian':'ID','thai':'TH','kingdom of thailand':'TH','singaporean':'SG','republic of singapore':'SG','filipino':'PH','filipina':'PH','the philippines':'PH','republic of the philippines':'PH','cambodian':'KH','kampuchea':'KH','kingdom of cambodia':'KH','brunei':'BN','negara brunei darussalam':'BN','bruneian':'BN','japanese':'JP','mongolian':'MN',
+  'east timor':'TL','timor leste':'TL','timorese':'TL',
+  'holland':'NL','the netherlands':'NL','kingdom of the netherlands':'NL','dutch':'NL',
+  'czech republic':'CZ','czech':'CZ','slovak republic':'SK','slovak':'SK',
+  'ivory coast':'CI','cote d ivoire':'CI','cote divoire':'CI','ivorian':'CI',
+  'turkey':'TR','turkiye':'TR','republic of turkiye':'TR','republic of turkey':'TR','turkish':'TR',
+  'vatican':'VA','vatican city':'VA','vatican city state':'VA','holy see vatican city state':'VA',
+  'state of palestine':'PS','palestinian territories':'PS','palestinian territory':'PS','occupied palestinian territory':'PS','west bank and gaza':'PS','palestinian':'PS',
+  'federated states of micronesia':'FM','micronesia federated states of':'FM',
+  'swaziland':'SZ','kingdom of eswatini':'SZ','cape verde':'CV','republic of cabo verde':'CV',
+  'macedonia':'MK','republic of north macedonia':'MK','fyrom':'MK','former yugoslav republic of macedonia':'MK',
+  'republic of moldova':'MD','moldova republic of':'MD',
+  'plurinational state of bolivia':'BO','bolivia plurinational state of':'BO',
+  'bolivarian republic of venezuela':'VE','venezuela bolivarian republic of':'VE',
+  'united republic of tanzania':'TZ','tanzania united republic of':'TZ','tanzanian':'TZ',
+  'democratic republic of the congo':'CD','democratic republic of congo':'CD','dr congo':'CD','drc':'CD','congo kinshasa':'CD','congo dr':'CD','congo democratic republic':'CD','congo the democratic republic of the':'CD','congo democratic republic of the':'CD','congo democratic republic of':'CD','zaire':'CD',
+  'republic of the congo':'CG','republic of congo':'CG','congo brazzaville':'CG','congo republic':'CG',
+  'the gambia':'GM','republic of the gambia':'GM','the bahamas':'BS','commonwealth of the bahamas':'BS',
+  'south africa':'ZA','rsa':'ZA','republic of south africa':'ZA','south african':'ZA',
+  'nz':'NZ','aotearoa':'NZ','new zealander':'NZ','kiwi':'NZ','australian':'AU','commonwealth of australia':'AU','aussie':'AU',
+  'canadian':'CA','mexican':'MX','united mexican states':'MX','brazilian':'BR','brasil':'BR','federative republic of brazil':'BR','argentine':'AR','argentinian':'AR','argentine republic':'AR','chilean':'CL','colombian':'CO','peruvian':'PE',
+  'german':'DE','deutschland':'DE','federal republic of germany':'DE','french':'FR','french republic':'FR','italian':'IT','italia':'IT','italian republic':'IT','spanish':'ES','espana':'ES','kingdom of spain':'ES','portuguese':'PT','portuguese republic':'PT',
+  'irish':'IE','republic of ireland':'IE','eire':'IE','belgian':'BE','kingdom of belgium':'BE','austrian':'AT','republic of austria':'AT','swiss':'CH','swiss confederation':'CH','luxembourgish':'LU','grand duchy of luxembourg':'LU',
+  'norwegian':'NO','kingdom of norway':'NO','swedish':'SE','kingdom of sweden':'SE','danish':'DK','kingdom of denmark':'DK','finnish':'FI','republic of finland':'FI','icelandic':'IS',
+  'polish':'PL','republic of poland':'PL','hungarian':'HU','romanian':'RO','bulgarian':'BG','greek':'GR','hellenic republic':'GR','ukrainian':'UA','serbian':'RS','republic of serbia':'RS','croatian':'HR','republic of croatia':'HR','slovenian':'SI','bosnian':'BA','albanian':'AL','montenegrin':'ME','kosovar':'XK','republic of kosovo':'XK','estonian':'EE','latvian':'LV','lithuanian':'LT','belarusian':'BY','cypriot':'CY','republic of cyprus':'CY','maltese':'MT','republic of malta':'MT',
+  'kazakh':'KZ','republic of kazakhstan':'KZ','uzbek':'UZ','republic of uzbekistan':'UZ','kyrgyz':'KG','kyrgyz republic':'KG','tajik':'TJ','turkmen':'TM','azerbaijani':'AZ','azeri':'AZ','georgian':'GE','armenian':'AM',
+  'israeli':'IL','state of israel':'IL','jordanian':'JO','hashemite kingdom of jordan':'JO','lebanese':'LB','iraqi':'IQ','republic of iraq':'IQ','yemeni':'YE','republic of yemen':'YE','qatari':'QA','state of qatar':'QA','omani':'OM','sultanate of oman':'OM','kuwaiti':'KW','state of kuwait':'KW','bahraini':'BH','kingdom of bahrain':'BH',
+  'egyptian':'EG','arab republic of egypt':'EG','moroccan':'MA','kingdom of morocco':'MA','algerian':'DZ','tunisian':'TN','libyan':'LY','sudanese':'SD','republic of the sudan':'SD','south sudanese':'SS','ethiopian':'ET','federal democratic republic of ethiopia':'ET','kenyan':'KE','republic of kenya':'KE','ugandan':'UG','rwandan':'RW','ghanaian':'GH','republic of ghana':'GH','nigerian':'NG','federal republic of nigeria':'NG','senegalese':'SN','cameroonian':'CM','zambian':'ZM','zimbabwean':'ZW','mozambican':'MZ','angolan':'AO','namibian':'NA','botswanan':'BW','mauritian':'MU','republic of mauritius':'MU','seychellois':'SC','malagasy':'MG','somali':'SO','djiboutian':'DJ','eritrean':'ER','malawian':'MW','malian':'ML','nigerien':'NE','chadian':'TD','togolese':'TG','beninese':'BJ','liberian':'LR','sierra leonean':'SL','guinean':'GN','gabonese':'GA','burundian':'BI','congolese':'CD',
+  'cuban':'CU','jamaican':'JM','haitian':'HT','dominican':'DO','trinidadian':'TT','trinidad':'TT','barbadian':'BB','bahamian':'BS','guyanese':'GY','surinamese':'SR','belizean':'BZ','panamanian':'PA','costa rican':'CR','nicaraguan':'NI','honduran':'HN','guatemalan':'GT','salvadoran':'SV','ecuadorian':'EC','bolivian':'BO','paraguayan':'PY','uruguayan':'UY','oriental republic of uruguay':'UY','venezuelan':'VE',
+  'fijian':'FJ','republic of fiji':'FJ','papua new guinean':'PG','png':'PG','samoan':'WS','tongan':'TO','solomon islander':'SB','vanuatuan':'VU',
+  'virgin islands british':'VG','virgin islands u s':'VI','u s virgin islands':'VI','us virgin islands':'VI','united states virgin islands':'VI',
+  'falkland islands malvinas':'FK','malvinas':'FK','pitcairn islands':'PN','svalbard':'SJ','heard island':'HM','french southern and antarctic lands':'TF','south georgia':'GS','cocos islands':'CC','keeling islands':'CC','wallis and futuna islands':'WF','sao tome':'ST','saint vincent':'VC','saint kitts':'KN','st kitts':'KN','bonaire':'BQ','caribbean netherlands':'BQ','gibraltar uk':'GI','channel islands':'XC','the channel islands':'XC','jersey channel islands':'JE','guernsey channel islands':'GG'
+};
+
+const NAME_PREFIX_STRIP = /^(the|republic of|kingdom of|state of|states of|federation of|federal republic of|federal democratic republic of|peoples republic of|peoples democratic republic of|democratic republic of|democratic socialist republic of|islamic republic of|socialist republic of|commonwealth of|united republic of|sultanate of|grand duchy of|principality of|union of|co operative republic of|cooperative republic of|plurinational state of|bolivarian republic of|hashemite kingdom of|arab republic of|federative republic of|oriental republic of|independent state of|republic of the|kingdom of the|territory of)\s+/;
+
+function stripMarks(s){ try { return s.normalize('NFKD').replace(/[̀-ͯ]/g,''); } catch(e){ return s; } }
+function normCountry(s){
+  let t = stripMarks(String(s||'')).toLowerCase().replace(/&/g,' and ').replace(/[^a-z0-9]+/g,' ').trim();
+  t = t.replace(/\bst\b/g,'saint').replace(/\s+/g,' ');
+  return t;
+}
+
+const COUNTRIES = [];           // {a2,a3,name,norm}
+const BY_A2 = {}, BY_A3 = {}, BY_NORM = {};
+ISO_TABLE.split('|').forEach(row => {
+  const [a2,a3,name] = row.split(':');
+  const c = {a2,a3,name,norm:normCountry(name)};
+  COUNTRIES.push(c); BY_A2[a2]=c; BY_A3[a3]=c; BY_NORM[c.norm]=a2;
+});
+const ALIAS_NORMS = Object.keys(COUNTRY_ALIASES);
+
+function flagOf(a2){
+  if(!a2 || a2.length!==2) return '';
+  try { return String.fromCodePoint(...[...a2.toUpperCase()].map(ch => 127397 + ch.charCodeAt(0))); } catch(e){ return ''; }
+}
+
+/* Listed and stated countries count as the same when one is a region the other belongs to (Channel Islands = Jersey + Guernsey). */
+const SAME_REGION = { JE:'XC', GG:'XC' };
+function sameCountry(a, b){ if(!a || !b) return false; return (SAME_REGION[a] || a) === (SAME_REGION[b] || b); }
+
+/* Values that mean 'no country given'. Bare NA is treated as a placeholder, so Namibia must be written out. */
+const PLACEHOLDERS = new Set(['na','n a','none','nil','null','tbc','tbd','tba','unknown','not applicable','not available','not stated','not specified','not known','pending','various','multiple','international','global','other','others','x','xx','xxx','test']);
+
+/* Resolve any country text → {a2, name, how:'exact'|'alias'|'fuzzy'|null, input} */
+function resolveCountry(input){
+  const raw = String(input||'').trim();
+  if(!raw) return {a2:null,name:'',how:null,input:raw};
+  let n = normCountry(raw);
+  if(!n || PLACEHOLDERS.has(n)) return {a2:null,name:'',how:null,input:raw};
+  const abbr = raw.trim().toUpperCase();
+  if(/^[A-Z]{2}$/.test(abbr) && BY_A2[abbr]) return {a2:abbr,name:BY_A2[abbr].name,how:'exact',input:raw};
+  if(/^[A-Z]{3}$/.test(abbr) && BY_A3[abbr]) return {a2:BY_A3[abbr].a2,name:BY_A3[abbr].name,how:'exact',input:raw};
+  const tryLookup = (t) => COUNTRY_ALIASES[t] || BY_NORM[t] || null;
+  let code = tryLookup(n);
+  if(code) return {a2:code,name:BY_A2[code].name,how:BY_NORM[n]?'exact':'alias',input:raw};
+  // strip parenthetical remnants and trailing qualifiers
+  const n2 = n.replace(/\b(sar|special administrative region|the)\b/g,' ').replace(/\s+/g,' ').trim();
+  code = tryLookup(n2); if(code) return {a2:code,name:BY_A2[code].name,how:'alias',input:raw};
+  // progressive prefix stripping: "Federal Republic of Germany" → "Germany"
+  let t = n, guard = 0;
+  while(guard++ < 4){
+    const m = t.match(NAME_PREFIX_STRIP);
+    if(!m) break;
+    t = t.slice(m[0].length).trim();
+    code = tryLookup(t); if(code) return {a2:code,name:BY_A2[code].name,how:'alias',input:raw};
+  }
+  // "X, Republic of" → "X"
+  const parts = n.split(/\s+(republic|kingdom|state|federation|islamic|democratic|peoples|plurinational|bolivarian|united)\s+of\s*$/);
+  if(parts.length>1){ code = tryLookup(parts[0].trim()); if(code) return {a2:code,name:BY_A2[code].name,how:'alias',input:raw}; }
+  // fuzzy: near-spellings such as "Banglades", "Srilanka", "Malasia"
+  if(n.length >= 4){
+    let best = null, bestS = 0;
+    for(const c of COUNTRIES){ const s = jaroWinkler(n, c.norm); if(s > bestS){ bestS = s; best = c.a2; } }
+    for(const a of ALIAS_NORMS){ if(a.length < 4) continue; const s = jaroWinkler(n, a); if(s > bestS){ bestS = s; best = COUNTRY_ALIASES[a]; } }
+    if(best && bestS >= 0.9) return {a2:best,name:BY_A2[best].name,how:'fuzzy',input:raw};
+  }
+  return {a2:null,name:raw,how:null,input:raw};
+}
+
+/* ===================== Name normalisation and matching ===================== */
+const HONORIFICS = new Set(['mr','mrs','ms','miss','mx','dr','prof','professor','hon','honourable','honorable','excellency','ambassador','sir','madam','madame','dame','lord','lady','eng','engr','er','ir','ts','adv','advocate','barrister','justice','rev','reverend','fr','father','cllr','councillor','senator','minister','secretary','dato','datuk','datin','tun','toh','puan','encik','cik','tuan','haji','hajji','hajjah','hj','alhaj','alhaji','al-haj','janab','janaba','shri','shree','smt','sri','srimathi','mohtarma','sahib','saheb','sahiba','esq','jr','sr','ii','iii','phd','mba','frcs','mp','capt','captain','maj','major','col','colonel','gen','general','brig','brigadier','lt','lieutenant','cdr','commander','adm','admiral','sgt','ret','retd','ybhg','yb','yab','ybrs','ydh','ydp']);
+const MULTIWORD_TITLES = /\b(tan\s+sri|dato'?\s+sri|dato'?\s+seri|datuk\s+seri|datin\s+seri|datin\s+paduka|dato'?\s+paduka|datuk\s+paduka|his\s+excellency|her\s+excellency|h\.\s*e\.|yang\s+(amat\s+)?berhormat|yang\s+berbahagia|yang\s+mulia|right\s+honourable|rt\.?\s+hon\.?|al\s+haj|al-haj|hon'ble|honble)(?![a-z])\.?/gi;
+const PARTICLES = new Set(['de','da','di','du','del','della','der','den','van','von','bin','binti','binte','bte','bt','bint','ibn','al','el','ul','ur','ud','le','la','los','las','dos','das','do','of','the','and','a']);
+/* Transliteration variants seen on South Asian and Malaysian guest lists → one canonical token. */
+const VARIANTS = (() => {
+  const groups = [
+    ['mohammad','muhammad','mohammed','mohamed','mohamad','mohd','muhd','md','mohammod','muhammod','mohmmad','mohammadd','muhamed','muhamad'],
+    ['rahman','rehman','rahaman','rohman','rahmaan'],
+    ['hossain','hussain','hussein','hosen','hosain','hussen','husain','hossen','hoshen','hussian'],
+    ['chowdhury','choudhury','chaudhry','chowdhary','chaudhary','chaudhuri','choudhary','chowdury','chaudhari'],
+    ['ahmed','ahmad','ahamed','ahamad','ahmmed'],
+    ['siddique','siddiqui','siddiq','siddiqi','siddik','siddiquee'],
+    ['sheikh','shaikh','shaik','shekh','shaykh','sheik'],
+    ['syed','sayed','saiyed','sayyid','sayyed','saeed'],
+    ['abdul','abdool','abd'],
+    ['haque','haq','huq','hoque','hak'],
+    ['karim','kareem'],['rahim','raheem'],['kabir','kabeer'],['alam','alom','aalam'],['hasan','hassan','hasaan'],
+    ['jahan','jahaan','jahhan'],['sultana','sultanah'],['akter','akhtar','akhter','aktar','akther'],['begum','begam','begom'],
+    ['khatun','khatoon'],['nasrin','nasreen'],['sharmin','sharmeen'],['farhana','farhanah'],['nur','noor','nuur','nor'],['nurul','noorul'],
+    ['zaman','zamaan'],['uddin','uddeen','udin'],['mia','miah','mian','meah'],['bhuiyan','bhuyan','bhuiya','bhuyian','bhuiyah'],
+    ['sarkar','sarker','sorkar'],['talukder','talukdar'],['mondal','mandal'],['majumder','majumdar','mazumder','mazumdar'],
+    ['patwary','patwari','patowary'],['barua','baruah'],['islam','eslam'],['anwar','anwer','anowar'],['jamil','jameel'],['tariq','tarique','tarek','tareq'],
+    ['salam','salaam'],['sultan','sultaan'],['faisal','faysal','foysal'],['rashid','rasheed','rashed'],['shahid','shaheed','shahed'],['nasir','naseer','nasser'],
+    ['yusuf','yousuf','yousef','yusof','yusuff','yousof'],['ibrahim','ebrahim','ibraheem'],['ismail','ismael','esmail'],['ali','aly'],['zainal','zainul','zaynal'],
+    ['perera','pereira'],['fernando','fernandez'],['dissanayake','dissanayaka','disanayaka','dissanayeke'],['jayawardena','jayawardene','jayewardene','jayawardana','jayawardhana'],
+    ['wickramasinghe','wickremasinghe','wickremesinghe','wickramasinha','wickramasingha'],['rajapaksa','rajapakse','rajapaksha'],
+    ['gunawardena','gunawardene','goonewardene','gunawardana','goonawardena'],['senanayake','senanayaka'],['bandaranaike','bandaranayake'],
+    ['samarasinghe','samarasingha'],['weerasinghe','weerasingha'],['jayasinghe','jayasingha'],['ranasinghe','ranasingha'],['ekanayake','ekanayaka'],['ratnayake','ratnayaka','rathnayake'],['wijesinghe','wijesingha'],
+    ['kumar','kumaar'],['kumara','kumaara'],['singh','singha'],['sharma','sarma'],['krishnan','krishnen'],['raj','raaj']
+  ];
+  const map = {};
+  groups.forEach(g => g.forEach(v => { map[v] = g[0]; }));
+  return map;
+})();
+const SUFFIX_RULES = [[/(singha|sinha|singhe)$/,'singhe'],[/(nayaka|nayake)$/,'nayake'],[/(wardana|wardena|wardene|wardhana|wardhane)$/,'wardena'],[/(pakse|paksa|paksha)$/,'paksa'],[/(ratna|ratne|rathna|rathne)$/,'ratne'],[/(arachchi|arachchige|aratchi|arachige)$/,'arachchi'],[/(tilaka|tilake|thilaka|thilake)$/,'tilake']];
+
+function nameTokens(raw, useVariants){
+  let s = stripMarks(String(raw||'')).toLowerCase();
+  s = s.replace(/\b[sdw]\/o\b/g,' ').replace(/@/g,' ');
+  s = s.replace(MULTIWORD_TITLES,' ');
+  s = s.replace(/\b(ud|ul|ur|ud)[\s-]+(din|deen|dhin)\b/g,'uddin').replace(/\bud[\s-]*dowla\b/g,'uddowla');
+  s = s.replace(/[^a-z0-9]+/g,' ').trim();
+  if(!s) return [];
+  let toks = s.split(' ').filter(t => t && !HONORIFICS.has(t));
+  if(toks.length === 0) toks = s.split(' ').filter(Boolean);
+  const nonParticles = toks.filter(t => !PARTICLES.has(t));
+  if(nonParticles.length) toks = nonParticles;
+  if(useVariants !== false){
+    toks = toks.map(t => {
+      if(VARIANTS[t]) return VARIANTS[t];
+      for(const [rx, rep] of SUFFIX_RULES){ if(rx.test(t) && t.length > rep.length + 2) return t.replace(rx, rep); }
+      return t;
+    });
+  }
+  return toks;
+}
+
+function jaroWinkler(a, b){
+  if(a === b) return 1;
+  const la = a.length, lb = b.length;
+  if(!la || !lb) return 0;
+  const range = Math.max(0, Math.floor(Math.max(la, lb) / 2) - 1);
+  const ma = new Array(la).fill(false), mb = new Array(lb).fill(false);
+  let m = 0;
+  for(let i = 0; i < la; i++){
+    const lo = Math.max(0, i - range), hi = Math.min(lb - 1, i + range);
+    for(let j = lo; j <= hi; j++){ if(!mb[j] && a[i] === b[j]){ ma[i] = mb[j] = true; m++; break; } }
+  }
+  if(!m) return 0;
+  let t = 0, k = 0;
+  for(let i = 0; i < la; i++){ if(!ma[i]) continue; while(!mb[k]) k++; if(a[i] !== b[k]) t++; k++; }
+  t /= 2;
+  const jaro = (m / la + m / lb + (m - t) / m) / 3;
+  let p = 0; while(p < 4 && p < la && p < lb && a[p] === b[p]) p++;
+  return jaro + p * 0.1 * (1 - jaro);
+}
+
+function tokenSim(q, g){
+  if(q === g) return 1;
+  if(q.length === 1) return g[0] === q ? 0.72 : 0;           // an initial
+  if(g.startsWith(q) && q.length >= 2) return 0.93;          // live typing / short form
+  if(q.startsWith(g) && g.length >= 3) return 0.85;          // list holds a short form
+  const jw = jaroWinkler(q, g);
+  return jw >= 0.84 ? jw * 0.96 : 0;
+}
+
+/* Score how well the typed query matches a guest. 1 = exact. */
+function scoreName(qTokens, gTokens){
+  if(!qTokens.length || !gTokens.length) return 0;
+  const used = new Set(); let total = 0;
+  for(const qt of qTokens){
+    let best = 0, bestI = -1;
+    gTokens.forEach((gt, i) => { if(used.has(i)) return; const s = tokenSim(qt, gt); if(s > best){ best = s; bestI = i; } });
+    if(bestI >= 0) used.add(bestI);
+    total += best;
+  }
+  const qCover = total / qTokens.length;
+  const gCover = used.size / gTokens.length;
+  let score = qCover * (0.72 + 0.28 * gCover);
+  if(qTokens.join(' ') === gTokens.join(' ')) score = 1;
+  return score;
+}
+function matchLabel(score){ return score >= 0.95 ? 'exact' : score >= 0.8 ? 'close' : 'possible'; }
+
+/* ===================== CSV / TSV parsing ===================== */
+function detectDelimiter(text){
+  const first = text.split(/\r?\n/).find(l => l.trim().length) || '';
+  const cands = [',',';','\t','|'];
+  let best = ',', bestN = -1;
+  cands.forEach(d => { let n = 0, inQ = false; for(const ch of first){ if(ch === '"') inQ = !inQ; else if(ch === d && !inQ) n++; } if(n > bestN){ bestN = n; best = d; } });
+  return best;
+}
+function parseDelimited(text, delim){
+  const d = delim || detectDelimiter(text);
+  const rows = []; let row = [], field = '', inQ = false;
+  for(let i = 0; i < text.length; i++){
+    const ch = text[i];
+    if(inQ){
+      if(ch === '"'){ if(text[i+1] === '"'){ field += '"'; i++; } else inQ = false; }
+      else field += ch;
+    } else if(ch === '"'){ inQ = true; }
+    else if(ch === d){ row.push(field); field = ''; }
+    else if(ch === '\n' || ch === '\r'){ if(ch === '\r' && text[i+1] === '\n') i++; row.push(field); rows.push(row); row = []; field = ''; }
+    else field += ch;
+  }
+  if(field.length || row.length){ row.push(field); rows.push(row); }
+  return rows.map(r => r.map(c => String(c).trim())).filter(r => r.some(c => c !== ''));
+}
+function toCSV(rows){
+  return rows.map(r => r.map(v => { const s = v == null ? '' : String(v); return /[",\r\n]/.test(s) ? '"' + s.replace(/"/g,'""') + '"' : s; }).join(',')).join('\r\n');
+}
+</script>
+
+<script>
+/* ===================== State ===================== */
+const STORAGE_KEY = 'gev.v1';
+const APP_VERSION = '1.2', APP_DATE = '2026-10-12';
+const $ = id => document.getElementById(id);
+let S = freshState();
+let pending = null, selectedId = null, currentResults = [], armTimers = {};
+
+function freshState(){ return { event:'', desk:'', strict:true, variants:true, sound:false, builtinRemoved:false, guests:[], headers:[], map:null, source:null, log:[] }; }
+function serialisable(){ return Object.assign({}, S, { guests: S.guests.map(g => { const c = Object.assign({}, g); delete c._tokens; return c; }) }); }
+function save(){
+  try { localStorage.setItem(STORAGE_KEY, JSON.stringify(serialisable())); $('footStorage').textContent = 'Saved on this device ' + fmtTime(new Date()); }
+  catch(e){ $('footStorage').textContent = 'Could not save to this browser (private window or storage blocked). Export the log before closing.'; }
+}
+function load(){
+  try { const raw = localStorage.getItem(STORAGE_KEY); if(raw){ const o = JSON.parse(raw); if(o && Array.isArray(o.guests) && Array.isArray(o.log)) S = Object.assign(freshState(), o); } } catch(e){}
+  recomputeTokens();
+}
+function recomputeTokens(){ S.guests.forEach(g => { g._tokens = nameTokens(g.name, S.variants); }); }
+function esc(s){ return String(s == null ? '' : s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
+function pad(n){ return String(n).padStart(2,'0'); }
+function fmtTime(d){ return pad(d.getHours()) + ':' + pad(d.getMinutes()); }
+function fmtStamp(d){ return d.getFullYear() + '-' + pad(d.getMonth()+1) + '-' + pad(d.getDate()) + ' ' + fmtTime(d) + ':' + pad(d.getSeconds()); }
+function todayISO(){ const d = new Date(); return d.getFullYear() + '-' + pad(d.getMonth()+1) + '-' + pad(d.getDate()); }
+function uid(){ return Date.now().toString(36) + Math.random().toString(36).slice(2,7); }
+
+let toastTimer = null;
+function toast(msg){ const t = $('toast'); t.textContent = msg; t.hidden = false; clearTimeout(toastTimer); toastTimer = setTimeout(() => { t.hidden = true; }, 2400); }
+
+function beep(kind){
+  if(!S.sound) return;
+  try {
+    const ctx = beep.ctx || (beep.ctx = new (window.AudioContext || window.webkitAudioContext)());
+    const seq = kind === 'ok' ? [[880, 0, .12]] : kind === 'bad' ? [[220, 0, .18],[220, .24, .18]] : [[440, 0, .1]];
+    seq.forEach(([f, at, dur]) => { const o = ctx.createOscillator(), g = ctx.createGain(); o.type = 'sine'; o.frequency.value = f; g.gain.value = .08; o.connect(g); g.connect(ctx.destination); o.start(ctx.currentTime + at); o.stop(ctx.currentTime + at + dur); });
+  } catch(e){}
+}
+
+/* Two-step destructive buttons: first click arms, second within 5 s confirms. */
+function armed(btn, label, fn){
+  if(btn.dataset.armed === '1'){ btn.dataset.armed = ''; btn.classList.remove('arm'); btn.textContent = label; clearTimeout(armTimers[btn.id]); fn(); return; }
+  btn.dataset.armed = '1'; btn.classList.add('arm'); btn.textContent = 'Confirm: ' + label.toLowerCase();
+  armTimers[btn.id] = setTimeout(() => { btn.dataset.armed = ''; btn.classList.remove('arm'); btn.textContent = label; }, 5000);
+}
+
+/* ===================== Derived data ===================== */
+const ADMIT_RESULTS = new Set(['admitted','override']);
+function admissionOf(guestId){ return S.log.find(e => e.guestId === guestId && ADMIT_RESULTS.has(e.result)) || null; }
+function tally(){
+  const expected = S.guests.length;
+  let arrived = 0; S.guests.forEach(g => { if(admissionOf(g.id)) arrived++; });
+  const exceptions = S.log.filter(e => e.result !== 'admitted').length;
+  return { expected, arrived, remaining: Math.max(0, expected - arrived), exceptions };
+}
+function renderTally(){
+  const t = tally();
+  $('tExpected').textContent = t.expected; $('tArrived').textContent = t.arrived; $('tRemaining').textContent = t.remaining; $('tExceptions').textContent = t.exceptions;
+  $('cntLog').textContent = S.log.length ? S.log.length : ''; $('cntList').textContent = S.guests.length ? S.guests.length : '';
+  $('hdrEvent').textContent = S.event || 'No event name set';
+  $('noListNotice').hidden = S.guests.length > 0;
+}
+
+/* ===================== Tabs ===================== */
+function showTab(name){
+  document.querySelectorAll('.tab').forEach(b => { const on = b.dataset.tab === name; b.classList.toggle('active', on); b.setAttribute('aria-selected', on ? 'true' : 'false'); });
+  ['desk','log','list','settings'].forEach(p => { $('panel-' + p).hidden = p !== name; });
+  if(name === 'log') renderLog();
+  if(name === 'list') renderList();
+  if(name === 'desk') setTimeout(() => $('q').focus(), 0);
+}
+
+/* ===================== Desk: search ===================== */
+function runSearch(){
+  const q = $('q').value;
+  const qTokens = nameTokens(q, S.variants);
+  const list = $('results');
+  currentResults = [];
+  if(!qTokens.length){ list.innerHTML = ''; $('notFound').hidden = true; return; }
+  const scored = [];
+  for(const g of S.guests){ const s = scoreName(qTokens, g._tokens); if(s >= 0.5) scored.push({ g, s }); }
+  scored.sort((a, b) => b.s - a.s || a.g.name.localeCompare(b.g.name));
+  currentResults = scored.slice(0, 8);
+  list.innerHTML = currentResults.map(({ g, s }, i) => {
+    const adm = admissionOf(g.id);
+    const lab = matchLabel(s);
+    const sub = g.details.map(d => d[1]).filter(Boolean).join(' · ');
+    return '<li><button type="button" class="result' + (g.id === selectedId ? ' selected' : '') + '" data-id="' + esc(g.id) + '" data-i="' + i + '">'
+      + '<span class="r-name">' + esc(g.name) + '</span>'
+      + '<span class="r-right"><span class="pill ' + lab + '">' + (lab === 'exact' ? 'Exact' : lab === 'close' ? 'Close' : 'Possible') + '</span>'
+      + (adm ? '<span class="pill arrived">Arrived ' + esc(fmtTime(new Date(adm.ts))) + '</span>' : '') + '</span>'
+      + '<span class="r-sub"><span class="flag">' + flagOf(g.cc) + '</span> ' + esc(g.countryName || g.country || 'Country not listed') + (sub ? ' · ' + esc(sub) : '') + '</span>'
+      + '</button></li>';
+  }).join('');
+  $('notFound').hidden = !(currentResults.length === 0 && q.trim().length >= 3);
+}
+
+function selectGuest(id, score){
+  const g = S.guests.find(x => x.id === id); if(!g) return;
+  selectedId = id;
+  $('walkinCard').hidden = true; $('emptyCard').hidden = true; $('guestCard').hidden = false;
+  document.querySelectorAll('.result').forEach(b => b.classList.toggle('selected', b.dataset.id === id));
+  const adm = admissionOf(g.id);
+  $('gName').textContent = g.name;
+  const s = score != null ? score : (currentResults.find(r => r.g.id === id) || {}).s;
+  $('gMatch').textContent = s != null ? (matchLabel(s) === 'exact' ? 'Exact match with the typed name' : matchLabel(s) === 'close' ? 'Close match with the typed name. Confirm the spelling with the guest.' : 'Possible match only. Confirm the full name with the guest.') : '';
+  $('gFlag').textContent = flagOf(g.cc);
+  $('gCountry').textContent = g.countryName || g.country || 'No country on the list';
+  $('gCode').textContent = g.cc ? g.cc + (BY_A2[g.cc] ? ' · ' + BY_A2[g.cc].a3 : '') : (g.country ? 'not recognised' : '');
+  $('gDetails').innerHTML = g.details.filter(d => d[1]).map(d => '<dt>' + esc(d[0]) + '</dt><dd>' + esc(d[1]) + '</dd>').join('');
+  const more = g.all.filter(d => d[1] && !g.details.some(x => x[0] === d[0]) && d[0] !== S.map.nameH && d[0] !== S.map.countryH);
+  $('gMoreWrap').hidden = more.length === 0; $('gMoreWrap').open = false;
+  $('gMore').innerHTML = more.map(d => '<dt>' + esc(d[0]) + '</dt><dd>' + esc(d[1]) + '</dd>').join('');
+  $('gStatus').className = 'pill' + (adm ? ' arrived' : ''); $('gStatus').textContent = adm ? 'Arrived ' + fmtTime(new Date(adm.ts)) : 'Not yet arrived';
+  $('gArrivedBanner').hidden = !adm;
+  if(adm) $('gArrivedBanner').textContent = 'Already admitted at ' + fmtTime(new Date(adm.ts)) + (adm.desk ? ' by ' + adm.desk : '') + (adm.countryStated ? ' · stated country: ' + adm.countryStated : '') + '. A second person using this name is an exception.';
+  $('btnDuplicate').hidden = !adm; $('btnAdmit').hidden = !!adm; $('btnOverride').hidden = true;
+  $('countryInput').value = ''; $('noteInput').value = '';
+  updateVerify();
+  setTimeout(() => $('countryInput').focus(), 0);
+}
+
+let verifyState = 'idle', statedResolved = null;
+function updateVerify(){
+  const g = S.guests.find(x => x.id === selectedId); if(!g) return;
+  const stated = $('countryInput').value.trim();
+  const box = $('vres'), txt = $('vresText');
+  statedResolved = stated ? resolveCountry(stated) : null;
+  const listedText = g.countryName || g.country || '';
+  const noCountry = !g.cc && (!g.country || PLACEHOLDERS.has(normCountry(g.country)));
+  if(noCountry){
+    verifyState = 'nocountry'; box.className = 'vres unknown';
+    txt.textContent = (g.country ? 'Listed as "' + g.country + '", so there is no country to check (organiser or international staff). ' : 'The list has no country for this guest. ') + 'Admit on the name; the stated country is recorded.' + (stated ? ' Stated: ' + (statedResolved.a2 ? statedResolved.name : stated) + '.' : '');
+  }
+  else if(!stated){ verifyState = 'idle'; box.className = 'vres'; txt.textContent = 'Enter the stated country to compare it with the list.'; }
+  else if(!g.cc){
+    if(normCountry(stated) === normCountry(g.country) || (statedResolved.a2 && normCountry(g.country) === normCountry(statedResolved.name))){ verifyState = 'match'; box.className = 'vres match'; txt.textContent = 'Matches the list: ' + g.country; }
+    else { verifyState = 'unknown'; box.className = 'vres unknown'; txt.textContent = 'The listed country "' + g.country + '" is not a recognised country name. Compare it manually with "' + stated + '".'; }
+  }
+  else if(!statedResolved.a2){ verifyState = 'unknown'; box.className = 'vres unknown'; txt.textContent = '"' + stated + '" is not a recognised country. Check the spelling, or compare manually with ' + listedText + '.'; }
+  else if(sameCountry(statedResolved.a2, g.cc)){ verifyState = 'match'; box.className = 'vres match'; txt.textContent = 'Country matches the list: ' + listedText + (statedResolved.a2 !== g.cc ? ' (' + statedResolved.name + ' is part of it)' : '') + (statedResolved.how === 'fuzzy' ? ' (read "' + stated + '" as ' + statedResolved.name + ')' : ''); }
+  else { verifyState = 'mismatch'; box.className = 'vres mismatch'; txt.textContent = 'Does not match. Listed: ' + listedText + ' · Stated: ' + statedResolved.name + (statedResolved.how === 'fuzzy' ? ' (read from "' + stated + '")' : ''); }
+  const adm = admissionOf(g.id);
+  if(adm) return;
+  if(S.strict){
+    const ok = verifyState === 'match' || verifyState === 'nocountry';
+    $('btnAdmit').disabled = !ok;
+    $('btnAdmit').title = ok ? '' : 'Enter the stated country; it must match the list';
+    $('btnOverride').hidden = !(verifyState === 'mismatch' || verifyState === 'unknown');
+  } else {
+    $('btnAdmit').disabled = false; $('btnAdmit').title = ''; $('btnOverride').hidden = true;
+  }
+}
+
+function logEntry(fields){
+  const e = Object.assign({ id: uid(), ts: new Date().toISOString(), desk: S.desk || '', note: '' }, fields);
+  S.log.unshift(e); save(); renderTally(); return e;
+}
+function clearSelection(){
+  selectedId = null; $('guestCard').hidden = true; $('walkinCard').hidden = true; $('emptyCard').hidden = false;
+  $('q').value = ''; runSearch(); $('q').focus();
+}
+function admitSelected(result){
+  const g = S.guests.find(x => x.id === selectedId); if(!g) return;
+  const note = $('noteInput').value.trim();
+  if(result === 'override' && !note){ toast('Add a note explaining the override first'); $('noteInput').focus(); return; }
+  if(result === 'admitted' && !S.strict && verifyState === 'mismatch') result = 'override';
+  logEntry({ guestId: g.id, result, nameListed: g.name, nameTyped: $('q').value.trim(), countryListed: g.countryName || g.country || '', countryListedCode: g.cc || '', countryStated: $('countryInput').value.trim(), countryStatedCode: statedResolved && statedResolved.a2 || '', verify: verifyState, match: $('gMatch').textContent.split(' ')[0].toLowerCase(), note });
+  beep(result === 'admitted' ? 'ok' : 'warn');
+  toast((result === 'admitted' ? 'Admitted: ' : 'Admitted with override: ') + g.name);
+  clearSelection();
+}
+function declineSelected(){
+  const g = S.guests.find(x => x.id === selectedId); if(!g) return;
+  logEntry({ guestId: g.id, result: 'declined', nameListed: g.name, nameTyped: $('q').value.trim(), countryListed: g.countryName || g.country || '', countryListedCode: g.cc || '', countryStated: $('countryInput').value.trim(), countryStatedCode: statedResolved && statedResolved.a2 || '', verify: verifyState, note: $('noteInput').value.trim() });
+  beep('bad'); toast('Entry declined: ' + g.name); clearSelection();
+}
+function duplicateSelected(){
+  const g = S.guests.find(x => x.id === selectedId); if(!g) return;
+  logEntry({ guestId: g.id, result: 'duplicate', nameListed: g.name, nameTyped: $('q').value.trim(), countryListed: g.countryName || g.country || '', countryListedCode: g.cc || '', countryStated: $('countryInput').value.trim(), countryStatedCode: statedResolved && statedResolved.a2 || '', verify: verifyState, note: $('noteInput').value.trim() });
+  beep('bad'); toast('Duplicate attempt recorded for ' + g.name); clearSelection();
+}
+function openWalkin(){
+  selectedId = null; $('guestCard').hidden = true; $('emptyCard').hidden = true; $('walkinCard').hidden = false;
+  $('wName').value = $('q').value.trim(); $('wCountry').value = ''; $('wNote').value = '';
+  setTimeout(() => $('wCountry').focus(), 0);
+}
+function finishWalkin(admit){
+  const name = $('wName').value.trim(); if(!name){ toast('Enter the name as given'); $('wName').focus(); return; }
+  const r = resolveCountry($('wCountry').value.trim());
+  logEntry({ guestId: null, result: admit ? 'walkin' : 'walkin-declined', nameListed: '', nameTyped: name, countryListed: '', countryListedCode: '', countryStated: $('wCountry').value.trim(), countryStatedCode: r.a2 || '', verify: 'n/a', note: $('wNote').value.trim() });
+  beep(admit ? 'warn' : 'bad'); toast((admit ? 'Admitted as exception: ' : 'Declined (not on list): ') + name); clearSelection();
+}
+
+/* ===================== Log ===================== */
+const RESULT_LABEL = { admitted: ['Admitted','arrived'], override: ['Admitted · override','possible'], walkin: ['Not on list · admitted','bad'], 'walkin-declined': ['Not on list · declined','bad'], duplicate: ['Duplicate attempt','bad'], declined: ['Declined','bad'] };
+function filteredLog(){
+  const f = $('logFilter').value, q = $('logSearch').value.trim().toLowerCase();
+  return S.log.filter(e => {
+    if(f === 'admitted' && e.result !== 'admitted') return false;
+    if(f === 'override' && e.result !== 'override') return false;
+    if(f === 'walkin' && !(e.result === 'walkin' || e.result === 'walkin-declined')) return false;
+    if(f === 'duplicate' && e.result !== 'duplicate') return false;
+    if(f === 'declined' && !(e.result === 'declined' || e.result === 'walkin-declined')) return false;
+    if(q){ const hay = [e.nameListed, e.nameTyped, e.countryListed, e.countryStated, e.note, e.desk].join(' ').toLowerCase(); if(!hay.includes(q)) return false; }
+    return true;
+  });
+}
+function renderLog(){
+  const rows = filteredLog();
+  const t = tally();
+  $('logSummary').textContent = S.log.length + ' entries · ' + t.arrived + ' guests admitted · ' + t.exceptions + ' exceptions';
+  $('logBody').innerHTML = rows.length ? rows.map(e => {
+    const [lab, cls] = RESULT_LABEL[e.result] || [e.result, ''];
+    const name = e.nameListed || e.nameTyped;
+    const typed = e.nameListed && e.nameTyped && e.nameTyped.toLowerCase() !== e.nameListed.toLowerCase() ? '<div class="small muted">typed: ' + esc(e.nameTyped) + '</div>' : '';
+    return '<tr><td class="time">' + esc(fmtStamp(new Date(e.ts))) + '</td><td><b>' + esc(name) + '</b>' + typed + '</td><td>' + (e.countryListedCode ? '<span class="flag">' + flagOf(e.countryListedCode) + '</span> ' : '') + esc(e.countryListed) + '</td><td>' + (e.countryStatedCode ? '<span class="flag">' + flagOf(e.countryStatedCode) + '</span> ' : '') + esc(e.countryStated) + '</td><td><span class="pill ' + cls + '">' + esc(lab) + '</span></td><td>' + esc(e.desk) + '</td><td>' + esc(e.note) + '</td></tr>';
+  }).join('') : '<tr class="empty-row"><td colspan="7">' + (S.log.length ? 'No entries match this filter.' : 'No entries yet. Admissions, overrides, declines and not-on-list records appear here.') + '</td></tr>';
+}
+function logCSV(){
+  const head = ['Time','Name (listed)','Name (as given)','Listed country','Listed ISO','Stated country','Stated ISO','Country check','Result','Desk','Note','Event'];
+  const rows = S.log.slice().reverse().map(e => [fmtStamp(new Date(e.ts)), e.nameListed, e.nameTyped, e.countryListed, e.countryListedCode, e.countryStated, e.countryStatedCode, e.verify, (RESULT_LABEL[e.result] || [e.result])[0], e.desk, e.note, S.event]);
+  return '﻿' + toCSV([head].concat(rows));
+}
+function slug(s){ return (s || 'event').toLowerCase().replace(/[^a-z0-9]+/g,'-').replace(/^-|-$/g,'').slice(0,40) || 'event'; }
+
+/* Offer a generated file. Inside the claude.ai viewer the downloads capability asks the viewer to save; a plain browser downloads directly; otherwise the text is shown for copying. */
+async function offerFile(filename, text, boxId, textId){
+  if(window.claude && typeof window.claude.use === 'function'){
+    let dl = null;
+    try { dl = await window.claude.use('downloads'); } catch(e){ dl = null; }
+    if(dl){
+      try { await dl.save({ filename, data: text }); toast('Saved ' + filename); return; }
+      catch(e){
+        const code = e && e.code;
+        if(code === 'declined'){ toast('Save cancelled'); return; }
+        if(code === 'rate_limited'){ toast('A save prompt is already open'); return; }
+      }
+    }
+    showCopy(boxId, textId, text); toast('Saving is not available here. The text is ready to copy.'); return;
+  }
+  try {
+    const blob = new Blob([text], { type: 'text/plain;charset=utf-8' });
+    const url = URL.createObjectURL(blob); const a = document.createElement('a'); a.href = url; a.download = filename; document.body.appendChild(a); a.click(); a.remove();
+    setTimeout(() => URL.revokeObjectURL(url), 3000); toast('Downloading ' + filename);
+  } catch(e){ showCopy(boxId, textId, text); }
+}
+function showCopy(boxId, textId, text){ $(boxId).hidden = false; $(textId).value = text; }
+async function copyText(text, boxId, textId){
+  try { await navigator.clipboard.writeText(text); toast('Copied to the clipboard'); }
+  catch(e){ showCopy(boxId, textId, text); const ta = $(textId); ta.focus(); ta.select(); toast('Select the text and copy it'); }
+}
+
+/* ===================== Guest list import ===================== */
+const RX = {
+  nameExact: /^(full\s*)?name$/i,
+  nameOf: /(guest|delegate|participant|attendee|invitee|nominee|visitor|member|person|contact|representative|speaker)\s*('?s)?\s*(full\s*)?name/i,
+  nameAny: /\bname\b/i,
+  nameBad: /(organi[sz]ation|company|event|file|user|short|display|badge|father|mother|spouse|emergency|contact\s*person|hotel|venue|street)\s*name|name\s*of\s*(organi[sz]ation|company|institution|firm|employer|hotel)/i,
+  first: /\b(first|given|fore)\s*name\b|^first$|^given$/i,
+  last: /\b(last|family|sur)\s*name\b|^surname$|^last$/i,
+  country: [/^country$/i, /^(country|nationality)\b(?!.*(code|phone|dial|call))/i, /nationality|citizenship|\bnation\b/i, /country/i],
+  org: /organi[sz]ation|company|affiliation|institution|employer|ministry|agency|firm|operator|opco|entity|department/i,
+  desig: /designation|position|role|job|^post$|^title$|job\s*title/i,
+  cat: /categor|^type$|invitation|tier|group|table|seat|vip|segment|track|delegation/i,
+  honorific: /^(mr|mrs|ms|miss|dr|prof|hon|dato|datuk|tan sri|h\.?e\.?)\.?$/i
+};
+function detectMapping(headers, data){
+  const n = headers.length; const idx = { name:-1, name2:-1, country:-1, d:[] };
+  const col = i => data.map(r => r[i] || '');
+  const find = (rx, exclude) => headers.findIndex((h, i) => rx.test(h) && !(exclude && exclude.test(h)) && !idx.d.includes(i) && i !== idx.name && i !== idx.country);
+  idx.name = find(RX.nameExact); if(idx.name < 0) idx.name = find(RX.nameOf, RX.nameBad); if(idx.name < 0) idx.name = headers.findIndex(h => RX.nameAny.test(h) && !RX.nameBad.test(h) && !RX.first.test(h) && !RX.last.test(h));
+  if(idx.name < 0){ const f = headers.findIndex(h => RX.first.test(h)), l = headers.findIndex(h => RX.last.test(h)); if(f >= 0){ idx.name = f; idx.name2 = l; } else if(l >= 0) idx.name = l; }
+  if(idx.name < 0){ // column whose values look most like personal names
+    let best = -1, bestS = 0;
+    for(let i = 0; i < n; i++){ const vals = col(i).filter(Boolean); if(!vals.length) continue; const s = vals.filter(v => /^[A-Za-z' .\-]+$/.test(v) && v.trim().split(/\s+/).length >= 2).length / vals.length; if(s > bestS){ bestS = s; best = i; } }
+    idx.name = best;
+  }
+  for(const rx of RX.country){ const i = headers.findIndex((h, j) => rx.test(h) && j !== idx.name); if(i >= 0){ idx.country = i; break; } }
+  if(idx.country < 0){ // column whose values resolve to countries
+    let best = -1, bestS = 0;
+    for(let i = 0; i < n; i++){ if(i === idx.name) continue; const vals = col(i).filter(Boolean); if(!vals.length) continue; const s = vals.slice(0, 60).filter(v => resolveCountry(v).a2).length / Math.min(60, vals.length); if(s > bestS){ bestS = s; best = i; } }
+    if(bestS >= 0.6) idx.country = best;
+  }
+  const isHonorificCol = i => { const vals = col(i).filter(Boolean); return vals.length && vals.filter(v => RX.honorific.test(v.trim())).length / vals.length >= 0.6; };
+  [RX.org, RX.desig, RX.cat].forEach(rx => { const i = headers.findIndex((h, j) => rx.test(h) && j !== idx.name && j !== idx.name2 && j !== idx.country && !idx.d.includes(j) && !isHonorificCol(j)); if(i >= 0) idx.d.push(i); });
+  for(let i = 0; i < n && idx.d.length < 3; i++){ if(i !== idx.name && i !== idx.name2 && i !== idx.country && !idx.d.includes(i) && !isHonorificCol(i) && !/e-?mail|phone|mobile|tel|passport|nid|id\s*no|address|remarks?|notes?/i.test(headers[i])) idx.d.push(i); }
+  return idx;
+}
+function fillSelect(sel, headers, chosen, allowNone){
+  sel.innerHTML = (allowNone ? '<option value="-1">— none —</option>' : '') + headers.map((h, i) => '<option value="' + i + '"' + (i === chosen ? ' selected' : '') + '>' + esc(h || ('Column ' + (i + 1))) + '</option>').join('');
+}
+function stageImport(rows, sourceLabel){
+  if(!rows || rows.length < 2){ toast('The file needs a header row and at least one guest row'); return; }
+  let hIdx = rows.findIndex(r => r.filter(c => c !== '').length >= 2 && r.some(c => /[A-Za-z]/.test(c)));
+  if(hIdx < 0) hIdx = 0;
+  const headers = rows[hIdx].map((h, i) => h || ('Column ' + (i + 1)));
+  const data = rows.slice(hIdx + 1).filter(r => r.some(c => c !== ''));
+  const m = detectMapping(headers, data);
+  pending = { headers, data, source: sourceLabel };
+  fillSelect($('mapName'), headers, m.name, false); fillSelect($('mapName2'), headers, m.name2, true); fillSelect($('mapCountry'), headers, m.country, true);
+  fillSelect($('mapD1'), headers, m.d[0] != null ? m.d[0] : -1, true); fillSelect($('mapD2'), headers, m.d[1] != null ? m.d[1] : -1, true); fillSelect($('mapD3'), headers, m.d[2] != null ? m.d[2] : -1, true);
+  $('mapSource').textContent = sourceLabel + ' · ' + data.length + ' rows · ' + headers.length + ' columns';
+  $('mappingCard').hidden = false; updateMapPreview();
+  $('mappingCard').scrollIntoView({ behavior: 'smooth', block: 'start' });
+}
+function updateMapPreview(){
+  if(!pending) return;
+  const ni = +$('mapName').value, n2 = +$('mapName2').value, ci = +$('mapCountry').value;
+  const sample = pending.data.slice(0, 3).map(r => (r[ni] || '') + (n2 >= 0 && r[n2] ? ' ' + r[n2] : '') + (ci >= 0 ? ' — ' + (r[ci] || '') : '')).join(' | ');
+  let unresolved = 0; if(ci >= 0) pending.data.forEach(r => { if(r[ci] && !resolveCountry(r[ci]).a2) unresolved++; });
+  $('mapPreview').textContent = 'Preview: ' + sample + (ci < 0 ? ' · No country column selected: country checks will be skipped.' : unresolved ? ' · ' + unresolved + ' country value(s) not recognised; they will be compared as plain text.' : ' · All country values recognised.');
+}
+function applyMapping(){
+  if(!pending) return;
+  const ni = +$('mapName').value, n2 = +$('mapName2').value, ci = +$('mapCountry').value, ds = [+$('mapD1').value, +$('mapD2').value, +$('mapD3').value].filter(i => i >= 0);
+  const guests = [];
+  pending.data.forEach((r, k) => {
+    const name = ((r[ni] || '') + (n2 >= 0 && r[n2] ? ' ' + r[n2] : '')).replace(/\s+/g, ' ').trim();
+    if(!name) return;
+    const country = ci >= 0 ? (r[ci] || '').trim() : '';
+    const res = country ? resolveCountry(country) : { a2: null, name: '' };
+    guests.push({ id: 'g' + (k + 1) + '-' + uid().slice(-4), name, country, cc: res.a2, countryName: res.a2 ? res.name : country, details: ds.map(i => [pending.headers[i], (r[i] || '').trim()]), all: pending.headers.map((h, i) => [h, (r[i] || '').trim()]) });
+  });
+  if(!guests.length){ toast('No guest names found in the selected column'); return; }
+  S.guests = guests; S.headers = pending.headers; S.map = { nameH: pending.headers[ni], countryH: ci >= 0 ? pending.headers[ci] : '' }; S.source = { label: pending.source, loadedAt: new Date().toISOString(), count: guests.length };
+  pending = null; $('mappingCard').hidden = true; $('pasteInput').value = ''; $('fileInput').value = '';
+  recomputeTokens(); save(); renderAll(); toast(guests.length + ' guests loaded'); showTab('desk');
+}
+function readFile(file){
+  const name = file.name || 'file';
+  if(/\.(xlsx|xlsm|xls)$/i.test(name)){
+    if(typeof XLSX === 'undefined'){ toast('Excel import needs an internet connection the first time. Save the sheet as CSV or paste the rows instead.'); return; }
+    const fr = new FileReader();
+    fr.onload = () => { try { const wb = XLSX.read(new Uint8Array(fr.result), { type: 'array' }); const ws = wb.Sheets[wb.SheetNames[0]]; const rows = XLSX.utils.sheet_to_json(ws, { header: 1, defval: '', raw: false }).map(r => r.map(c => String(c == null ? '' : c).trim())).filter(r => r.some(c => c !== '')); stageImport(rows, name + (wb.SheetNames.length > 1 ? ' (sheet: ' + wb.SheetNames[0] + ')' : '')); } catch(e){ toast('Could not read this workbook: ' + (e.message || e)); } };
+    fr.readAsArrayBuffer(file);
+  } else {
+    const fr = new FileReader();
+    fr.onload = () => { try { stageImport(parseDelimited(String(fr.result).replace(/^﻿/, '')), name); } catch(e){ toast('Could not read this file: ' + (e.message || e)); } };
+    fr.readAsText(file);
+  }
+}
+/* Built-in participant list, stored encrypted: AES-256-GCM with a key derived from the desk passcode (PBKDF2-SHA256). The page holds no names in clear. */
+const BUILTIN = { event: 'IIC International Regulators Forum 2026, Kuala Lumpur (12–13 Oct 2026)', label: 'IRF 2026 participant list (built in, encrypted; PDF of 2026-10-10)', headers: null, rows: null };
+const ENC = { iter: 310000, salt: 'hP6dKTDzCFT6/+IDIpSaBA==', iv: '9JewQC47xIPdqH6K', ct: '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' };
+function b64ToBytes(b){ const s = atob(b); const a = new Uint8Array(s.length); for(let i = 0; i < s.length; i++) a[i] = s.charCodeAt(i); return a; }
+async function decryptList(pass){
+  if(!(window.crypto && window.crypto.subtle)) throw new Error('nocrypto');
+  const enc = new TextEncoder();
+  const base = await crypto.subtle.importKey('raw', enc.encode(String(pass).trim().toLowerCase()), 'PBKDF2', false, ['deriveKey']);
+  const key = await crypto.subtle.deriveKey({ name: 'PBKDF2', salt: b64ToBytes(ENC.salt), iterations: ENC.iter, hash: 'SHA-256' }, base, { name: 'AES-GCM', length: 256 }, false, ['decrypt']);
+  const plain = await crypto.subtle.decrypt({ name: 'AES-GCM', iv: b64ToBytes(ENC.iv) }, key, b64ToBytes(ENC.ct));
+  return JSON.parse(new TextDecoder().decode(plain));
+}
+function showUnlock(msg){ $('unlockCard').hidden = false; $('noListNotice').hidden = true; $('unlockMsg').textContent = msg || ''; setTimeout(() => $('unlockPass').focus(), 0); }
+function hideUnlock(){ $('unlockCard').hidden = true; }
+async function unlock(pass){
+  if(!pass || !String(pass).trim()){ showUnlock('Enter the desk passcode.'); return false; }
+  $('btnUnlock').disabled = true; $('unlockMsg').textContent = 'Unlocking…';
+  try {
+    const payload = await decryptList(pass);
+    BUILTIN.headers = payload.headers; BUILTIN.rows = payload.rows;
+    try { sessionStorage.setItem('gev.pass', String(pass).trim()); } catch(e){}
+    hideUnlock(); $('unlockPass').value = ''; loadBuiltin(); return true;
+  } catch(e){
+    showUnlock(e && e.message === 'nocrypto' ? 'This browser cannot process the passcode here. Open the page over https (or as a saved file), not plain http.' : 'That passcode did not unlock the list. Check it against the message that came with the link and try again.');
+    return false;
+  } finally { $('btnUnlock').disabled = false; }
+}
+function loadBuiltin(){
+  if(!BUILTIN.rows){ showUnlock('Enter the desk passcode to load the participant list.'); return; }
+  stageImport([BUILTIN.headers.slice()].concat(BUILTIN.rows.map(r => r.slice())), BUILTIN.label);
+  applyMapping();
+  S.builtinRemoved = false; if(!S.event) S.event = BUILTIN.event; save(); renderTally(); $('setEvent').value = S.event;
+}
+function stripPassFromUrl(){ if(/[#&]p=/.test(location.hash || '')){ try { history.replaceState(null, '', location.pathname + location.search); } catch(e){} } }
+async function autoUnlock(){
+  const m = (location.hash || '').match(/[#&]p=([^&]+)/);
+  let pass = ''; try { pass = m ? decodeURIComponent(m[1]) : ''; } catch(e){ pass = m ? m[1] : ''; }
+  stripPassFromUrl();
+  if(!pass){ try { pass = sessionStorage.getItem('gev.pass') || ''; } catch(e){} }
+  if(pass) await unlock(pass); else showUnlock('');
+}
+
+/* ===================== Guest list view ===================== */
+function renderList(){
+  const has = S.guests.length > 0;
+  $('listLoaded').hidden = !has;
+  $('listStatus').textContent = has ? S.guests.length + ' guests · ' + (S.source ? S.source.label + ' · loaded ' + fmtStamp(new Date(S.source.loadedAt)) : '') : 'No list loaded.';
+  if(!has) return;
+  const q = $('listSearch').value.trim(), f = $('listFilter').value;
+  const qTokens = nameTokens(q, S.variants);
+  const rows = S.guests.filter(g => { const adm = admissionOf(g.id); if(f === 'arrived' && !adm) return false; if(f === 'pending' && adm) return false; if(qTokens.length && scoreName(qTokens, g._tokens) < 0.5 && !(g.countryName || '').toLowerCase().includes(q.toLowerCase())) return false; return true; });
+  $('listBody').innerHTML = rows.length ? rows.map((g, i) => { const adm = admissionOf(g.id); return '<tr><td class="num">' + (i + 1) + '</td><td><b>' + esc(g.name) + '</b></td><td><span class="flag">' + flagOf(g.cc) + '</span> ' + esc(g.countryName || g.country || '—') + (g.cc ? ' <span class="mono small muted">' + g.cc + '</span>' : (g.country ? ' <span class="pill possible">unrecognised</span>' : '')) + '</td><td class="small">' + esc(g.details.map(d => d[1]).filter(Boolean).join(' · ')) + '</td><td>' + (adm ? '<span class="pill arrived">Arrived ' + esc(fmtTime(new Date(adm.ts))) + '</span>' : '<span class="pill">Not yet</span>') + '</td></tr>'; }).join('') : '<tr class="empty-row"><td colspan="5">No guests match.</td></tr>';
+  const by = {}; S.guests.forEach(g => { const k = g.countryName || g.country || 'Not stated'; by[k] = by[k] || { n: 0, a: 0, cc: g.cc }; by[k].n++; if(admissionOf(g.id)) by[k].a++; });
+  const ks = Object.keys(by).sort((a, b) => by[b].n - by[a].n || a.localeCompare(b));
+  $('countryCount').textContent = ks.length + ' countries';
+  $('countryBars').innerHTML = ks.map(k => '<div class="bar"><span><span class="flag">' + flagOf(by[k].cc) + '</span> ' + esc(k) + '</span><div class="track"><div class="fill ok" style="width:' + Math.round(by[k].a / by[k].n * 100) + '%"></div></div><span class="n">' + by[k].a + ' / ' + by[k].n + '</span></div>').join('');
+}
+
+/* ===================== Backup / restore ===================== */
+function backupJSON(){ return JSON.stringify({ app: 'Guest Entry Verifier', version: APP_VERSION, exportedAt: new Date().toISOString(), state: serialisable() }, null, 1); }
+function restoreFrom(text){
+  try {
+    const o = JSON.parse(text); const st = o && o.state ? o.state : o;
+    if(!st || !Array.isArray(st.guests) || !Array.isArray(st.log)) throw new Error('not a backup of this tool');
+    S = Object.assign(freshState(), st); recomputeTokens(); save(); renderAll(); syncSettings(); toast('Backup restored: ' + S.guests.length + ' guests, ' + S.log.length + ' log entries'); $('restoreInput').value = ''; $('restoreFile').value = '';
+  } catch(e){ toast('Could not restore: ' + (e.message || e)); }
+}
+
+/* ===================== Settings / render all ===================== */
+function syncSettings(){ $('setEvent').value = S.event; $('setDesk').value = S.desk; $('setStrict').checked = !!S.strict; $('setVariants').checked = S.variants !== false; $('setSound').checked = !!S.sound; }
+function renderAll(){ renderTally(); runSearch(); if(!$('panel-log').hidden) renderLog(); if(!$('panel-list').hidden) renderList(); }
+
+/* ===================== Wire up ===================== */
+function init(){
+  load();
+  $('countryList').innerHTML = COUNTRIES.slice().sort((a, b) => a.name.localeCompare(b.name)).map(c => '<option value="' + esc(c.name) + '">').join('');
+  if(typeof XLSX === 'undefined') $('xlsxNote').textContent = 'Excel import is unavailable right now (library did not load). CSV files and pasted rows work offline.';
+  document.querySelectorAll('.tab').forEach(b => b.addEventListener('click', () => showTab(b.dataset.tab)));
+  $('btnGoImport').addEventListener('click', () => showTab('list'));
+  $('btnSampleDesk').addEventListener('click', loadBuiltin); $('btnSample').addEventListener('click', loadBuiltin);
+  const q = $('q');
+  q.addEventListener('input', runSearch);
+  q.addEventListener('keydown', e => {
+    if(e.key === 'Enter'){ e.preventDefault(); if(currentResults.length) selectGuest(currentResults[0].g.id, currentResults[0].s); else if(q.value.trim().length >= 3 && S.guests.length) openWalkin(); }
+    else if(e.key === 'Escape'){ clearSelection(); }
+    else if(e.key === 'ArrowDown'){ const first = document.querySelector('.result'); if(first){ e.preventDefault(); first.focus(); } }
+  });
+  $('results').addEventListener('click', e => { const b = e.target.closest('.result'); if(b) selectGuest(b.dataset.id, currentResults[+b.dataset.i] && currentResults[+b.dataset.i].s); });
+  $('results').addEventListener('keydown', e => { const b = e.target.closest('.result'); if(!b) return; if(e.key === 'ArrowDown' && b.parentElement.nextElementSibling){ e.preventDefault(); b.parentElement.nextElementSibling.querySelector('.result').focus(); } if(e.key === 'ArrowUp'){ e.preventDefault(); const p = b.parentElement.previousElementSibling; if(p) p.querySelector('.result').focus(); else q.focus(); } });
+  $('btnWalkin').addEventListener('click', openWalkin);
+  $('countryInput').addEventListener('input', updateVerify);
+  $('countryInput').addEventListener('keydown', e => { if(e.key === 'Enter'){ e.preventDefault(); if(!$('btnAdmit').hidden && !$('btnAdmit').disabled) admitSelected('admitted'); else $('noteInput').focus(); } if(e.key === 'Escape') clearSelection(); });
+  $('noteInput').addEventListener('keydown', e => { if(e.key === 'Escape') clearSelection(); });
+  $('btnAdmit').addEventListener('click', () => admitSelected('admitted'));
+  $('btnOverride').addEventListener('click', () => admitSelected('override'));
+  $('btnDuplicate').addEventListener('click', duplicateSelected);
+  $('btnDecline').addEventListener('click', declineSelected);
+  $('btnClear').addEventListener('click', clearSelection);
+  $('btnWalkinAdmit').addEventListener('click', () => finishWalkin(true));
+  $('btnWalkinDecline').addEventListener('click', () => finishWalkin(false));
+  $('btnWalkinCancel').addEventListener('click', clearSelection);
+  // log
+  $('logFilter').addEventListener('change', renderLog); $('logSearch').addEventListener('input', renderLog);
+  $('btnSaveLog').addEventListener('click', () => { if(!S.log.length){ toast('The log is empty'); return; } offerFile('entry-log_' + slug(S.event) + '_' + todayISO() + '.csv', logCSV(), 'logCopyBox', 'logCopyText'); });
+  $('btnCopyLog').addEventListener('click', () => { if(!S.log.length){ toast('The log is empty'); return; } copyText(logCSV().replace(/^﻿/, ''), 'logCopyBox', 'logCopyText'); });
+  $('btnClearLog').addEventListener('click', () => armed($('btnClearLog'), 'Clear log', () => { S.log = []; save(); renderAll(); renderLog(); toast('Log cleared'); }));
+  // import
+  $('fileInput').addEventListener('change', e => { const f = e.target.files && e.target.files[0]; if(f) readFile(f); });
+  const dz = $('dropZone');
+  ['dragenter','dragover'].forEach(ev => dz.addEventListener(ev, e => { e.preventDefault(); dz.classList.add('over'); }));
+  ['dragleave','drop'].forEach(ev => dz.addEventListener(ev, e => { e.preventDefault(); dz.classList.remove('over'); }));
+  dz.addEventListener('drop', e => { const f = e.dataTransfer && e.dataTransfer.files && e.dataTransfer.files[0]; if(f) readFile(f); });
+  $('btnImportPaste').addEventListener('click', () => { const t = $('pasteInput').value; if(!t.trim()){ toast('Paste the rows first, header row included'); return; } stageImport(parseDelimited(t), 'Pasted rows'); });
+  ['mapName','mapName2','mapCountry'].forEach(id => $(id).addEventListener('change', updateMapPreview));
+  $('btnApplyMap').addEventListener('click', applyMapping);
+  $('btnCancelMap').addEventListener('click', () => { pending = null; $('mappingCard').hidden = true; });
+  $('listSearch').addEventListener('input', renderList); $('listFilter').addEventListener('change', renderList);
+  $('btnRemoveList').addEventListener('click', () => armed($('btnRemoveList'), 'Remove list', () => { S.guests = []; S.source = null; S.map = null; S.headers = []; S.builtinRemoved = true; selectedId = null; save(); renderAll(); renderList(); $('guestCard').hidden = true; $('emptyCard').hidden = false; toast('Guest list removed. The log is kept.'); }));
+  // settings
+  $('setEvent').addEventListener('input', e => { S.event = e.target.value; save(); renderTally(); });
+  $('setDesk').addEventListener('input', e => { S.desk = e.target.value; save(); });
+  $('setStrict').addEventListener('change', e => { S.strict = e.target.checked; save(); if(selectedId) updateVerify(); });
+  $('setVariants').addEventListener('change', e => { S.variants = e.target.checked; recomputeTokens(); save(); runSearch(); });
+  $('setSound').addEventListener('change', e => { S.sound = e.target.checked; save(); if(S.sound) beep('ok'); });
+  $('btnSaveBackup').addEventListener('click', () => offerFile('guest-entry-backup_' + slug(S.event) + '_' + todayISO() + '.json', backupJSON(), 'backupCopyBox', 'backupCopyText'));
+  $('btnCopyBackup').addEventListener('click', () => copyText(backupJSON(), 'backupCopyBox', 'backupCopyText'));
+  $('restoreFile').addEventListener('change', e => { const f = e.target.files && e.target.files[0]; if(!f) return; const fr = new FileReader(); fr.onload = () => restoreFrom(String(fr.result)); fr.readAsText(f); });
+  $('btnRestore').addEventListener('click', () => { const t = $('restoreInput').value.trim(); if(!t){ toast('Choose a backup file or paste its contents'); return; } restoreFrom(t); });
+  $('btnClearAll').addEventListener('click', () => armed($('btnClearAll'), 'Clear all data on this device', () => { S = freshState(); selectedId = null; pending = null; try { localStorage.removeItem(STORAGE_KEY); } catch(e){} syncSettings(); renderAll(); renderList(); renderLog(); $('guestCard').hidden = true; $('emptyCard').hidden = false; $('footStorage').textContent = ''; toast('All data cleared from this device'); }));
+  syncSettings(); renderAll(); showTab('desk');
+  $('btnUnlock').addEventListener('click', () => unlock($('unlockPass').value));
+  $('unlockPass').addEventListener('keydown', e => { if(e.key === 'Enter'){ e.preventDefault(); unlock($('unlockPass').value); } });
+  if(!S.guests.length && !S.builtinRemoved) autoUnlock(); else stripPassFromUrl();
+}
+init();
+</script>
+
+</body>
+</html>
